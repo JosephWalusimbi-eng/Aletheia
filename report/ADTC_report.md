@@ -78,7 +78,7 @@ an optimal balance between training quality and compute cost.
 |--------|------|-----|--------------|----------|
 | F16 | 6.18 GB | ~8 GB | None | Exceeds budget |
 | Q8_0 | 3.2 GB | ~5 GB | <1% | Acceptable |
-| **Q4_K_M** | **1.93 GB** | **~3.7 GB** | **~2%** | **✅ Selected** |
+| **Q4_K_M** | **1.8 GB** | **~3.7 GB** | **~2%** | **✅ Selected** |
 | Q2_K | 1.27 GB | ~3.1 GB | ~8% | Fallback |
 
 Q4_K_M provides approximately 98% of F16 quality at 31% of the file

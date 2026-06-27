@@ -21,7 +21,7 @@ if [ -f "$MODEL_FILE" ]; then
     exit 0
 fi
 
-echo "Downloading primary model: aletheia_q4km.gguf (~1.93 GB)"
+echo "Downloading primary model: aletheia_q4km.gguf (~1.8 GB)"
 echo "This may take several minutes depending on your connection."
 echo ""
 
