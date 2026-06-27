@@ -1,6 +1,6 @@
-# Aletheia — Offline-First Clinical Decision Support AI
+# Aletheia - Offline-First Clinical Decision Support AI
 
-> *From the Greek ἀλήθεια — truth, disclosure. The revealing of what is hidden.*
+> *From the Greek ἀλήθεια - truth, disclosure. The revealing of what is hidden.*
 
 [![ADTC 2026](https://img.shields.io/badge/ADTC%202026-Laptop%20LLM%20Track-blue)](https://adtc-2026.devpost.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
