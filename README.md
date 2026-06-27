@@ -33,7 +33,7 @@ Aletheia runs the entire clinical reasoning pipeline **on-device**:
 
 - ✅ **No internet required** — ever, at inference time
 - ✅ **No GPU required** — runs on CPU only
-- ✅ **1.93 GB model file** — fits on a USB drive
+- ✅ **1.80 GB model file** — fits on a USB drive
 - ✅ **~3,880 MB peak RAM** — well within the 8 GB ADTC budget
 - ✅ **Web UI + CLI** — browser interface or terminal
 - ✅ **50 clinical conditions** weighted for African disease epidemiology
@@ -83,7 +83,7 @@ This will automatically:
 bash models/download_model.sh
 ```
 
-This downloads `aletheia_q4km.gguf` (~1.93 GB) — the primary deployment model.
+This downloads `aletheia_q4km.gguf` (~1.80 GB) — the primary deployment model.
 
 > If automatic download fails, see [models/README.md](models/README.md) for
 > manual download instructions.
@@ -322,7 +322,7 @@ python3 run.py --symptoms "heavy bleeding after delivery, pallor, tachycardia" -
 | ECE (Calibration) | 0.275 |
 | Training Loss (final) | 0.5197 |
 | Training Time (A100) | 1.92 hours |
-| Peak RAM — CLI | ~3,730 MB |
+| Peak RAM — CLI | ~3,630 MB |
 | Peak RAM — Web UI | ~3,880 MB |
 | ADTC Memory Ceiling | 7,168 MB |
 | **ADTC Status** | ✅ **PASS** |
@@ -408,7 +408,7 @@ Aletheia/
 | Training hardware | NVIDIA A100-SXM4-80GB |
 | Training time | 1.92 hours |
 | Deployment format | GGUF Q4_K_M |
-| Model file size | 1.93 GB |
+| Model file size | 1.80 GB |
 | Inference engine | llama.cpp (CPU only, no GPU) |
 
 ---
@@ -418,7 +418,7 @@ Aletheia/
 | Requirement | Value | Limit | Status |
 |-------------|-------|-------|--------|
 | Peak RAM (Web UI) | ~3,880 MB | 7,168 MB | ✅ PASS |
-| Peak RAM (CLI) | ~3,730 MB | 7,168 MB | ✅ PASS |
+| Peak RAM (CLI) | ~3,630 MB | 7,168 MB | ✅ PASS |
 | Internet at runtime | None | None | ✅ PASS |
 | GPU at runtime | None | None | ✅ PASS |
 | African use case | Healthcare, Uganda | Bonus +10 pts | ✅ YES |
