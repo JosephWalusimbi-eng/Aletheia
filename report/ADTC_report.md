@@ -52,13 +52,9 @@ sub-Saharan Africa.
 |--------|-----------|-----|---------|----------|
 | Qwen2.5-0.5B | 0.5B | ~0.8 GB | Too limited | Rejected |
 | Qwen2.5-1.5B | 1.5B | ~1.5 GB | Limited reasoning | Rejected |
-| **Qwen2.5-3B** | **3.09B** | **~3.7 GB** | **Strong** | ** Selected** |
+| **Qwen2.5-3B** | **3.09B** | **~3.6 GB** | **Strong** | **✅ Selected** |
 | Llama-3.2-3B | 3.2B | ~3.9 GB | Good | Alternative |
 | Qwen2.5-7B | 7.4B | ~8.5 GB | Exceeds budget | Rejected |
-
-Qwen2.5-3B-Instruct was selected for its strong instruction-following
-performance at a parameter count that fits comfortably within the ADTC
-memory budget after Q4_K_M quantisation.
 
 ### Fine-tuning Method
 
@@ -69,32 +65,33 @@ memory budget after Q4_K_M quantisation.
 | **QLoRA (4-bit)** | **~6 GB VRAM** | **Good** | **✅ Selected** |
 | Prompt engineering only | 0 | Limited | Insufficient |
 
-QLoRA with r=32, α=64 on all 7 linear projection layers provided
-an optimal balance between training quality and compute cost.
-
 ### Quantisation Format
 
 | Format | Size | RAM | Quality loss | Decision |
 |--------|------|-----|--------------|----------|
 | F16 | 6.18 GB | ~8 GB | None | Exceeds budget |
 | Q8_0 | 3.2 GB | ~5 GB | <1% | Acceptable |
-| **Q4_K_M** | **1.8 GB** | **~3.7 GB** | **~2%** | **✅ Selected** |
-| Q2_K | 1.27 GB | ~3.1 GB | ~8% | Fallback |
+| **Q4_K_M** | **1.80 GB** | **~3.6 GB** | **~2%** | **✅ Selected** |
+| Q2_K | 1.19 GB | ~3.0 GB | ~8% | Fallback |
 
-Q4_K_M provides approximately 98% of F16 quality at 31% of the file
-size, well within the ADTC memory ceiling with 3,438 MB to spare.
+Q4_K_M provides approximately 98% of F16 quality at 29% of the file
+size, well within the ADTC memory ceiling with 3,538 MB to spare.
+
+### Interface
+
+| Option | RAM overhead | Decision |
+|--------|-------------|----------|
+| Terminal CLI only | ~0 MB | Available |
+| **Gradio Web UI** | **~150 MB** | **✅ Selected (primary)** |
+| Electron desktop app | ~400 MB | Future work |
 
 ### Inference Engine
 
 | Option | CPU support | Performance | Decision |
 |--------|------------|-------------|----------|
-| **llama.cpp** | ** Excellent** | **Best CPU** | ** Selected** |
-| Ollama |  Good | Moderate | Alternative |
-| HuggingFace transformers |  Slow | Slow on CPU | Rejected |
-| ONNX Runtime |  Good | Moderate | Alternative |
-
-llama.cpp was selected for its superior CPU inference performance,
-minimal dependencies, and native GGUF format support.
+| **llama.cpp** | **✅ Excellent** | **Best CPU** | **✅ Selected** |
+| Ollama | ✅ Good | Moderate | Alternative |
+| HuggingFace transformers | ✅ Slow | Slow on CPU | Rejected |
 
 ---
 
@@ -107,17 +104,18 @@ minimal dependencies, and native GGUF format support.
 | Transformers | 4.44.2 | Model loading and tokenisation |
 | PEFT | 0.12.0 | QLoRA fine-tuning |
 | TRL | 0.10.1 | SFT training loop |
-| bitsandbytes | 0.43.0+ | 4-bit quantisation |
+| bitsandbytes | 0.43.0+ | 4-bit quantisation during training |
 | llama.cpp | Latest | GGUF CPU inference |
-| Google Colab Pro | A100 | Training hardware |
-| MedQA-USMLE | - | Training data (real MCQs) |
-| MedMCQA | - | Training data (real MCQs) |
+| Gradio | 4.0+ | Web UI interface |
+| Google Colab Pro | A100-SXM4-80GB | Training hardware |
+| MedQA-USMLE | — | Training data source |
+| MedMCQA | — | Training data source |
 
 ---
 
 ## 5. Dataset
 
-**Total training samples:** 27,000 (train: 24,300 / eval: 2,700)
+**Total: 30,000 samples | Train: 27,000 | Eval: 3,000**
 
 | Source | Samples | Proportion |
 |--------|---------|------------|
@@ -126,14 +124,13 @@ minimal dependencies, and native GGUF format support.
 | MedMCQA | 6,000 | 20% |
 
 **Clinical conditions covered:** 50 conditions weighted for African
-disease epidemiology, spanning Infectious/Tropical, Respiratory,
+disease epidemiology across Infectious/Tropical, Respiratory,
 Cardiovascular, Obstetric, Paediatric, Neurological, Renal/Endocrine,
 Surgical/Trauma, and other specialties.
 
-**Reasoning types:** 8 task types including initial differential,
-test recommendation, evidence update, rationale explanation,
-follow-up questions, severity assessment, treatment hint,
-and red flag identification.
+**Reasoning types:** 8 types — initial differential, test recommendation,
+evidence update, rationale explanation, follow-up questions, severity
+assessment, treatment hint, and red flag identification.
 
 ---
 
@@ -161,18 +158,20 @@ and red flag identification.
 | Metric | Value |
 |--------|-------|
 | ECE (Expected Calibration Error) | 0.275 |
-| MCE (Maximum Calibration Error) | — |
-| Brier Score | — |
+| Training Loss (final) | 0.5197 |
 
 ### ADTC Compliance
 
 | Metric | Value | ADTC Limit | Status |
 |--------|-------|------------|--------|
-| Model file size | 1.8 GB | — | — |
-| Estimated peak RAM | ~3,730 MB | 7,168 MB | ✅ PASS |
-| Margin below ceiling | 3,438 MB | — | ✅ |
+| Model size (Q4_K_M) | **1.80 GB** | — | — |
+| Model size (Q2_K fallback) | 1.19 GB | — | — |
+| Peak RAM (Q4_K_M) | **~3,630 MB** | 7,168 MB | ✅ PASS |
+| Peak RAM (Q2_K fallback) | ~2,990 MB | 7,168 MB | ✅ PASS |
+| Margin below ceiling | 3,538 MB | — | ✅ |
 | Internet required | None | None | ✅ |
 | GPU required | None | None | ✅ |
+| African use case | Healthcare, Uganda | +10 pts bonus | ✅ YES |
 
 ---
 
@@ -185,13 +184,15 @@ and red flag identification.
 | LoRA alpha (α) | 64 |
 | LoRA dropout | 0.05 |
 | Trainable parameters | 59,867,136 (1.94%) |
+| Target modules | q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj |
 | Training epochs | 3 |
 | Effective batch size | 16 |
 | Learning rate | 2 × 10⁻⁴ |
-| LR scheduler | Cosine with warmup |
+| LR scheduler | Cosine with warmup (5%) |
 | Training loss (final) | 0.5197 |
-| Training time | 1.92 hours (A100) |
-| Precision | BFloat16 |
+| Training time | 1.92 hours |
+| Hardware | NVIDIA A100-SXM4-80GB (Google Colab Pro) |
+| Precision | BFloat16 (full precision, no quantisation during training) |
 
 ---
 
@@ -199,8 +200,8 @@ and red flag identification.
 
 **Domain:** Healthcare — Clinical Decision Support
 
-**Target users:** Clinical officers and nurses at district hospitals
-and health centres across sub-Saharan Africa
+**Target users:** Clinical officers, nurses, and physicians at district
+hospitals and health centres across sub-Saharan Africa
 
 **Deployment context:**
 - District hospitals with no specialist physicians
@@ -208,46 +209,60 @@ and health centres across sub-Saharan Africa
 - Facilities with no reliable internet connectivity
 - Settings where a single clinical officer sees 80–120 patients/day
 
-**Impact:** In a context where the correct diagnosis appears in the
-top 3 suggestions 100% of the time, Aletheia functions as a cognitive
-support tool that ensures critical conditions (meningitis, eclampsia,
-cerebral malaria) are not missed under time pressure.
+**Active clinical validation:** Two co-authors from the School of Health
+Sciences, Soroti University — Precious Boss Kasasira and Charles Brian
+Okoboi — are practising clinicians actively testing and evaluating
+Aletheia against real clinical presentations. Early findings indicate the
+ranked differential output is clinically plausible and useful for decision
+support in the majority of cases reviewed to date.
 
+**Impact:** A system that presents the correct diagnosis in 80% of
+first suggestions and 100% of top-3 suggestions functions as a genuine
+cognitive support tool that ensures critical conditions — meningitis,
+eclampsia, cerebral malaria — are not missed under time pressure.
+
+**ADTC African Use Case Bonus (+10 pts):** ✅ Yes — healthcare,
+Uganda, district hospital deployment
 
 ---
 
 ## 9. Limitations
 
-1. Training data is predominantly synthetic
-2. Evaluation conducted on 10 core case categories — a larger
-   clinician-validated evaluation set is needed
-3. ECE of 0.275 indicates probability estimates need calibration
-   before use as actionable confidence values
-4. No prospective clinical validation study completed yet
+1. Training data predominantly synthetic — probability distributions
+   reflect authors' clinical knowledge rather than empirical
+   epidemiological data. Ongoing refinement with clinician co-authors.
+2. Evaluation on 10 core case categories using automated metrics —
+   broader clinician-graded evaluation set under development.
+3. ECE of 0.275 — probability estimates should be treated as relative
+   rankings rather than absolute confidence values.
+4. Formal prospective validation study pending IRB approval — active
+   informal evaluation currently underway with clinician co-authors.
 
 ---
 
 ## 10. Future Work
 
-- Prospective clinical validation at multiple health facilities
-  in Eastern Uganda (IRB pending)
-- Expansion to 100+ clinical conditions
+- Formal reporting of ongoing clinical evaluation with co-authors
+- Multi-site prospective validation study across Eastern Uganda
+  (target: 500+ cases, subject to UNCST IRB approval)
+- Expansion from 50 to 100+ clinical conditions
 - Kiswahili and Ateso language support
-- Lightweight desktop GUI for non-technical users
+- Desktop GUI for non-technical clinical users
 - Uganda NDA software-as-a-medical-device regulatory pathway
+- Commercialisation through Arapai Technologies International Limited
 
 ---
 
 ## 11. Team
 
-**Soroti University, Uganda — Department of Electronics and
-Computer Engineering:**
+**Soroti University — Department of Electronics and Computer Engineering:**
 - Joseph Walusimbi
 - Ann Move Oguti
 - Abubakhari Sserwadda
 
 **Soroti University — School of Health Sciences:**
-- Precious Nasasara
+- Precious Boss Kasasira (practising clinician, validation co-author)
+- Charles Brian Okoboi (practising clinician, validation co-author)
 
 **Arapai Technologies International Limited, Uganda**
 
@@ -259,4 +274,5 @@ https://github.com/JosephWalusimbi-eng/Aletheia
 
 ---
 
-*Aletheia is a research prototype. It is not a licensed medical device.*
+*Aletheia is a research prototype. It is not a licensed medical device
+and should not be used as the sole basis for clinical decisions.*

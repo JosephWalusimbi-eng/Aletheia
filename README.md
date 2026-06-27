@@ -1,6 +1,6 @@
-# Aletheia - Offline-First Clinical Decision Support AI
+# Aletheia — Offline-First Clinical Decision Support AI
 
-> *From the Greek ἀλήθεια - truth, disclosure. The revealing of what is hidden.*
+> *From the Greek ἀλήθεια — truth, disclosure. The revealing of what is hidden.*
 
 [![ADTC 2026](https://img.shields.io/badge/ADTC%202026-Laptop%20LLM%20Track-blue)](https://adtc-2026.devpost.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -33,7 +33,7 @@ Aletheia runs the entire clinical reasoning pipeline **on-device**:
 
 - ✅ **No internet required** — ever, at inference time
 - ✅ **No GPU required** — runs on CPU only
-- ✅ **1.8 GB model file** — fits on a USB drive
+- ✅ **1.93 GB model file** — fits on a USB drive
 - ✅ **~3,880 MB peak RAM** — well within the 8 GB ADTC budget
 - ✅ **Web UI + CLI** — browser interface or terminal
 - ✅ **50 clinical conditions** weighted for African disease epidemiology
@@ -83,7 +83,7 @@ This will automatically:
 bash models/download_model.sh
 ```
 
-This downloads `aletheia_q4km.gguf` (~1.8 GB) — the primary deployment model.
+This downloads `aletheia_q4km.gguf` (~1.93 GB) — the primary deployment model.
 
 > If automatic download fails, see [models/README.md](models/README.md) for
 > manual download instructions.
@@ -408,7 +408,7 @@ Aletheia/
 | Training hardware | NVIDIA A100-SXM4-80GB |
 | Training time | 1.92 hours |
 | Deployment format | GGUF Q4_K_M |
-| Model file size | 1.8 GB |
+| Model file size | 1.93 GB |
 | Inference engine | llama.cpp (CPU only, no GPU) |
 
 ---
@@ -427,14 +427,56 @@ Aletheia/
 
 ## Running the Benchmark
 
-To measure real performance on your hardware:
+Aletheia supports both the **official ADTC profiler** and a custom benchmark script.
+
+---
+
+### Option A — Official ADTC Profiler (Required for submission)
+
+The official profiler from the Africa Deep Tech Foundation measures latency,
+throughput, memory, and CPU performance in a standardised way that matches
+what judges use to evaluate your submission.
+
+```bash
+bash benchmark/run_adtc_profiler.sh
+```
+
+This script will:
+1. Clone the official profiler from [github.com/Africa-Deep-Tech-Foundation/adtc-profiler](https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler)
+2. Install its dependencies
+3. Run it against `aletheia_q4km.gguf`
+4. Save results to `benchmark/adtc_profiler_results.json`
+
+**Use the numbers from this output for the ADTC Self-Reported Profiler Score
+on your Devpost submission form.**
+
+You can also run the profiler manually:
+
+```bash
+# Clone profiler
+git clone https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler.git
+cd adtc-profiler
+
+# Install dependencies
+pip3 install -r requirements.txt
+
+# Run against Aletheia model
+python3 profiler.py --model ../models/aletheia_q4km.gguf
+```
+
+---
+
+### Option B — Custom Benchmark Script
+
+For quick local testing and sanity checks:
 
 ```bash
 bash benchmark/benchmark.sh
 ```
 
-Results are saved to `benchmark/results.json` and printed to the terminal.
-Use these numbers for the ADTC Self-Reported Profiler Score.
+Results are saved to `benchmark/results.json`.
+This script measures the same metrics but uses a simpler implementation.
+**Do not use these numbers for the official ADTC submission — use Option A.**
 
 ---
 
@@ -465,8 +507,7 @@ If you use Aletheia in your research, please cite:
 | Joseph Walusimbi | Electronics & Computer Engineering |
 | Ann Move Oguti | Electronics & Computer Engineering |
 | Abubakhari Sserwadda | Electronics & Computer Engineering |
-| Precious Boss Kasasira | School of Health Sciences |
-| Charles Brian Okoboi   | School of Health Sciences |
+| Precious Nasasara | School of Health Sciences |
 
 **Arapai Technologies International Limited** — Uganda
 
@@ -474,12 +515,9 @@ If you use Aletheia in your research, please cite:
 
 ## Conflict of Interest
 
-J.Walusimbi and A.M.Oguti are
-co-founders and directors of Arapai Technologies International
-Limited, a technology company based in Uganda. Aletheia is
-intended for future commercialisation through this entity.
-A.Sserwadda, P.B.Kasasira, and C.B.Okoboi declare no
-competing interests.
+J. Walusimbi is the founder and director of Arapai Technologies
+International Limited. Aletheia is intended for future commercialisation
+through this entity.
 
 ---
 

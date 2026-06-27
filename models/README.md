@@ -12,8 +12,8 @@ bash models/download_model.sh
 
 | File | Size | RAM | Quality | Use |
 |------|------|-----|---------|-----|
-| `aletheia_q4km.gguf` | 1.8 GB | ~3,730 MB | Primary | **ADTC submission** |
-| `aletheia_q2k.gguf` | 1.19 GB | ~3,075 MB | Fallback | 4 GB RAM devices |
+| `aletheia_q4km.gguf` | 1.8 GB | ~3,630 MB | Primary | **ADTC submission** |
+| `aletheia_q2k.gguf` | 1.19 GB | ~2,990 MB | Fallback | 4 GB RAM devices |
 
 Both files pass the ADTC 2026 memory ceiling of 7,168 MB.
 
