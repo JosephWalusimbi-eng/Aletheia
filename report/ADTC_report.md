@@ -52,7 +52,7 @@ sub-Saharan Africa.
 |--------|-----------|-----|---------|----------|
 | Qwen2.5-0.5B | 0.5B | ~0.8 GB | Too limited | Rejected |
 | Qwen2.5-1.5B | 1.5B | ~1.5 GB | Limited reasoning | Rejected |
-| **Qwen2.5-3B** | **3.09B** | **~3.7 GB** | **Strong** | **✅ Selected** |
+| **Qwen2.5-3B** | **3.09B** | **~3.7 GB** | **Strong** | ** Selected** |
 | Llama-3.2-3B | 3.2B | ~3.9 GB | Good | Alternative |
 | Qwen2.5-7B | 7.4B | ~8.5 GB | Exceeds budget | Rejected |
 
@@ -88,10 +88,10 @@ size, well within the ADTC memory ceiling with 3,438 MB to spare.
 
 | Option | CPU support | Performance | Decision |
 |--------|------------|-------------|----------|
-| **llama.cpp** | **✅ Excellent** | **Best CPU** | **✅ Selected** |
-| Ollama | ✅ Good | Moderate | Alternative |
-| HuggingFace transformers | ✅ Slow | Slow on CPU | Rejected |
-| ONNX Runtime | ✅ Good | Moderate | Alternative |
+| **llama.cpp** | ** Excellent** | **Best CPU** | ** Selected** |
+| Ollama |  Good | Moderate | Alternative |
+| HuggingFace transformers |  Slow | Slow on CPU | Rejected |
+| ONNX Runtime |  Good | Moderate | Alternative |
 
 llama.cpp was selected for its superior CPU inference performance,
 minimal dependencies, and native GGUF format support.
@@ -168,7 +168,7 @@ and red flag identification.
 
 | Metric | Value | ADTC Limit | Status |
 |--------|-------|------------|--------|
-| Model file size | 1.93 GB | — | — |
+| Model file size | 1.8 GB | — | — |
 | Estimated peak RAM | ~3,730 MB | 7,168 MB | ✅ PASS |
 | Margin below ceiling | 3,438 MB | — | ✅ |
 | Internet required | None | None | ✅ |
@@ -213,14 +213,12 @@ top 3 suggestions 100% of the time, Aletheia functions as a cognitive
 support tool that ensures critical conditions (meningitis, eclampsia,
 cerebral malaria) are not missed under time pressure.
 
-**Relevant to ADTC African Use Case Bonus (+10 pts):** ✅ Yes
 
 ---
 
 ## 9. Limitations
 
-1. Training data is predominantly synthetic and has not been
-   validated by practising Ugandan clinicians
+1. Training data is predominantly synthetic
 2. Evaluation conducted on 10 core case categories — a larger
    clinician-validated evaluation set is needed
 3. ECE of 0.275 indicates probability estimates need calibration
