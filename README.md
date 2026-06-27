@@ -1,6 +1,6 @@
-# Aletheia — Offline-First Clinical Decision Support AI
+# Aletheia - Offline-First Clinical Decision Support AI
 
-> *From the Greek ἀλήθεια — truth, disclosure. The revealing of what is hidden.*
+> *From the Greek ἀλήθεια - truth, disclosure. The revealing of what is hidden.*
 
 [![ADTC 2026](https://img.shields.io/badge/ADTC%202026-Laptop%20LLM%20Track-blue)](https://adtc-2026.devpost.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -465,7 +465,8 @@ If you use Aletheia in your research, please cite:
 | Joseph Walusimbi | Electronics & Computer Engineering |
 | Ann Move Oguti | Electronics & Computer Engineering |
 | Abubakhari Sserwadda | Electronics & Computer Engineering |
-| Precious Nasasara | School of Health Sciences |
+| Precious Boss Kasasira | School of Health Sciences |
+| Charles Brian Okoboi   | School of Health Sciences |
 
 **Arapai Technologies International Limited** — Uganda
 
@@ -473,9 +474,12 @@ If you use Aletheia in your research, please cite:
 
 ## Conflict of Interest
 
-J. Walusimbi is the founder and director of Arapai Technologies
-International Limited. Aletheia is intended for future commercialisation
-through this entity.
+J.Walusimbi and A.M.Oguti are
+co-founders and directors of Arapai Technologies International
+Limited, a technology company based in Uganda. Aletheia is
+intended for future commercialisation through this entity.
+A.Sserwadda, P.B.Kasasira, and C.B.Okoboi declare no
+competing interests.
 
 ---
 
