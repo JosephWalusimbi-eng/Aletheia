@@ -637,18 +637,10 @@ python3.11 -m adtc_profiler run \
 
 
 
-
-curl -L \
-    "https://drive.google.com/uc?export=download&confirm=t&id=1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
-    -o ~/Aletheia/models/aletheia_q4km.gguf
-
+Second model
 
     # Use python3.11 explicitly to run gdown
-python3.11 -m gdown "1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
-    -O ~/Aletheia/models/aletheia_q4km.gguf
+python3.11 -m gdown "1u5tRnskrBpmn-YmdNcFIQDWjKs9fK-yw" \
+    -O ~/Aletheia/models/aletheia_q2km.gguf
 
 
-    # Alternative — wget direct download
-wget --no-check-certificate \
-    "https://drive.google.com/uc?export=download&id=1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
-    -O ~/Aletheia/models/aletheia_q4km.gguf
