@@ -63,6 +63,31 @@ git clone https://github.com/JosephWalusimbi-eng/Aletheia.git
 cd Aletheia
 ```
 
+### Step 1b — Install Python 3.11 (Ubuntu 22.04 — required before Step 2)
+
+Ubuntu 22.04 ships with Python 3.10 but the ADTC profiler requires Python 3.11.
+The package names `python3.11-pip` and `python3.11-venv` are **not available**
+directly — use the deadsnakes PPA instead:
+
+```bash
+# Add deadsnakes PPA
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt update
+
+# Install Python 3.11
+sudo apt install python3.11 python3.11-venv -y
+
+# Install pip for 3.11 separately
+curl -sS https://bootstrap.pypa.io/get-pip.py | sudo python3.11
+
+# Set Python 3.11 as default
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+sudo update-alternatives --set python3 /usr/bin/python3.11
+
+# Verify — should show Python 3.11.x
+python3 --version
+```
+
 ### Step 2 — Run the install script
 
 ```bash
