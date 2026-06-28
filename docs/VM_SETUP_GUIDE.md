@@ -15,18 +15,18 @@ Download VirtualBox from https://www.virtualbox.org
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| Name | Aletheia-ADTC | Any name |
+| Name | VMAletheia | Any name |
 | Type | Linux | — |
 | Version | Ubuntu 22.04 LTS (64-bit) | ADTC standard OS |
 | RAM | **8192 MB (8 GB)** | Matches ADTC spec exactly |
 | CPU cores | **4** | Simulates i5 10th gen |
-| Storage | **60 GB** (VDI, dynamically allocated) | Model = 1.8 GB + OS |
+| Storage | **60 GB** (VDI, dynamically allocated) | Model = 1.8 GB + OS + packages |
 | 3D Acceleration | **OFF** | No GPU — ADTC spec |
 | Network | NAT | Internet for setup only |
 
 **Step by step in VirtualBox:**
 1. Click **New**
-2. Name: `Aletheia-ADTC` → Type: Linux → Version: Ubuntu (64-bit) → Next
+2. Name: `VMAletheia` → Type: Linux → Version: Ubuntu (64-bit) → Next
 3. Memory: drag to **8192 MB** → Next
 4. Create a virtual hard disk → VDI → Dynamically allocated → **60 GB** → Create
 5. Right-click the VM → **Settings**
@@ -37,8 +37,13 @@ Download VirtualBox from https://www.virtualbox.org
 > ⚠️ **Store the VM on C: drive** (e.g. `C:\VMs\VMAletheia`), not on an
 > external or secondary drive (D:, E:). Storing on external drives causes
 > "Failed to save the settings" errors when adding shared folders.
-> If you already created the VM on another drive, move the entire VM
-> folder to C: and re-add it via Machine → Add.
+> If you already created the VM on another drive, use the resize process
+> in the Troubleshooting section to move it.
+
+> ⚠️ **Start with 60 GB** — not 25 GB. The model file (1.80 GB) +
+> llama.cpp build (~500 MB) + Ubuntu base (~10 GB) + Python packages
+> fills a 25 GB disk completely, causing the VM to freeze and the
+> terminal to stop opening.
 
 **Download Ubuntu 22.04 LTS:**
 ```
@@ -50,7 +55,7 @@ https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso
 2. Click the disk icon on the right → Choose disk file → select the ISO
 3. Start the VM
 4. Choose **Install Ubuntu** → Minimal installation → Erase disk and install
-5. Set username: `aletheia` / password: `aletheia` (or whatever you prefer)
+5. Set username and password
 6. Wait ~15 minutes for installation to complete
 7. Restart when prompted → remove ISO when asked
 
@@ -70,11 +75,9 @@ https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso
 
 ## PART 2 — INITIAL UBUNTU SETUP
 
-After Ubuntu boots for the first time:
+After Ubuntu boots for the first time, open a terminal (Ctrl+Alt+T).
 
 ### Step 1 — Update the system
-
-Open a terminal (Ctrl+Alt+T) and run:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -83,8 +86,8 @@ sudo apt update && sudo apt upgrade -y
 ### Step 2 — Install Python 3.11
 
 Ubuntu 22.04 ships with Python 3.10 but the ADTC profiler requires 3.11.
-The packages `python3.11-pip` and `python3.11-venv` are **not available**
-directly on Ubuntu 22.04 — use the deadsnakes PPA instead:
+The packages `python3.11-pip` and `python3.11-venv` do **not exist** on
+Ubuntu 22.04 — use the deadsnakes PPA instead:
 
 ```bash
 # Add deadsnakes PPA
@@ -94,7 +97,7 @@ sudo apt update
 # Install Python 3.11 and venv
 sudo apt install python3.11 python3.11-venv -y
 
-# Install pip for 3.11 separately (python3.11-pip does not exist)
+# Install pip for 3.11 separately
 curl -sS https://bootstrap.pypa.io/get-pip.py | sudo python3.11
 
 # Set Python 3.11 as default
@@ -109,8 +112,9 @@ pip3 --version
 # Should show pip associated with python3.11
 ```
 
-> ⚠️ Do NOT try `sudo apt install python3.11-pip` — this package does not
-> exist on Ubuntu 22.04 and will give an error. Use the curl method above.
+> ⚠️ Do NOT run `sudo apt install python3.11-pip` — this package does
+> not exist on Ubuntu 22.04 and will give "Unable to locate package" error.
+> Use the curl method above instead.
 
 ### Step 3 — Install Git
 
@@ -131,71 +135,26 @@ git clone https://github.com/JosephWalusimbi-eng/Aletheia.git
 cd Aletheia
 ```
 
-### Step 2 — Run the install script
-
-```bash
-bash install.sh
-```
-
-This will automatically:
-- Install build tools (cmake, gcc, build-essential)
-- Install Python packages (gradio, rich, requests)
-- Clone llama.cpp from GitHub
-- Build llama.cpp for CPU-only inference (takes ~5 minutes)
-- Write the inference configuration file
-
-**Expected output:**
-```
-[ 1/5 ] Installing system dependencies... ✅
-[ 2/5 ] Installing Python packages...    ✅
-[ 3/5 ] Building llama.cpp (~3 min)...  ✅
-[ 4/5 ] Writing configuration...         ✅
-[ 5/5 ] Checking model...
-    ⚠️  Model file not found.
-    Run: bash models/download_model.sh
-```
-
-The model warning is expected — you haven't downloaded it yet.
-
-### Step 3 — Get the code from GitHub
-
-```bash
-cd ~
-git clone https://github.com/JosephWalusimbi-eng/Aletheia.git
-cd Aletheia
-```
-
 This gets all scripts, configs, and the full repo structure instantly.
+No need for shared folders or USB drives.
 
----
-
-### Step 4 — Download the model file from Google Drive
+### Step 2 — Download the model file from Google Drive
 
 The model file (`aletheia_q4km.gguf`, 1.80 GB) is too large for GitHub.
 Download it directly from Google Drive inside the VM.
 
-**Get the file ID:**
-1. Open Google Drive in the VM browser
-2. Go to `arapai_output/gguf/`
-3. Right-click `aletheia_q4km.gguf` → **Share** → **Copy link**
-4. The link looks like:
-   `https://drive.google.com/file/d/1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO/view?usp=sharing`
-5. The file ID is the part between `/d/` and `/view`
-
-**Download using gdown:**
 ```bash
 # Install gdown
 pip3 install gdown
 
-# Download (this is the actual Aletheia model file ID)
-gdown "1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
+# Download using the model file ID
+python3.11 -m gdown "1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
     -O ~/Aletheia/models/aletheia_q4km.gguf
 ```
 
-If gdown gives a "permission denied" or "quota exceeded" error:
+If gdown gives a "permission denied" or quota error, use the fuzzy method:
 ```bash
-# Use the fuzzy URL method instead
-gdown --fuzzy \
+python3.11 -m gdown --fuzzy \
     "https://drive.google.com/file/d/1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO/view?usp=sharing" \
     -O ~/Aletheia/models/aletheia_q4km.gguf
 ```
@@ -206,21 +165,15 @@ ls -lh ~/Aletheia/models/aletheia_q4km.gguf
 # Should show: ~1.8 GB
 ```
 
----
+> ℹ️ gdown may show `1.93 G` while Google Drive shows `1.8 GB` — this
+> is normal. They are the same file in different units (GiB vs GB).
 
-### Step 5 — Run the install script
-
-Now that the repo and model are in place:
+### Step 3 — Run the install script
 
 ```bash
 cd ~/Aletheia
 bash install.sh
 ```
-
-> ⚠️ Note on VirtualBox Shared Folders: if you try to set up a shared
-> folder and get "Failed to save the settings" error, it is likely a
-> permissions issue with the drive where the VM is stored. Use the
-> gdown method above instead — it is simpler and more reliable.
 
 **Expected output:**
 ```
@@ -235,25 +188,19 @@ bash install.sh
 
 ### Troubleshooting install.sh — "No module named apt_pkg"
 
-If `bash install.sh` shows this error:
-
+If `bash install.sh` shows:
 ```
 ModuleNotFoundError: No module named 'apt_pkg'
 E: Problem executing scripts APT::Update::Post-Invoke-Success
 ```
 
-This is a known Ubuntu 22.04 issue when Python 3.11 is set as default
-but `python3-apt` was built for Python 3.10. Fix it first, then re-run:
-
+Fix:
 ```bash
-# Fix apt_pkg
 sudo apt install python3-apt -y
-
-# Re-run install
 bash install.sh
 ```
 
-If the error persists, bypass install.sh and set up manually:
+If it still fails, bypass install.sh and set up manually:
 
 ```bash
 # Step A — System dependencies
@@ -272,8 +219,8 @@ cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 echo "llama.cpp built ✅"
 
 # Step D — Write config file
-# Replace 'joe' with your actual Ubuntu username (run: whoami)
 USERNAME=$(whoami)
+mkdir -p ~/Aletheia/inference
 cat > ~/Aletheia/inference/config.json << EOF
 {
   "llama_cli": "/home/${USERNAME}/llama.cpp/build/bin/llama-cli",
@@ -288,20 +235,33 @@ echo "Config written ✅"
 echo "Manual setup complete ✅"
 ```
 
-Verify the config was written correctly:
+Verify the config:
 ```bash
 cat ~/Aletheia/inference/config.json
+```
+
+### Step 4 — Fix Pillow (required for Gradio web UI)
+
+Before running the web UI, upgrade Pillow to avoid an import error:
+
+```bash
+pip3 install --upgrade Pillow
+```
+
+If Gradio still fails after upgrading:
+```bash
+pip3 install --upgrade --force-reinstall Pillow gradio
 ```
 
 ---
 
 ## PART 4 — TEST FUNCTIONALITY
 
-Run each test in order. Each one confirms a different layer of the system.
+Run each test in order.
 
 ### Test 1 — Single query (CLI)
 
-This is the fastest test — confirms the model loads and runs:
+Confirms model loads and inference works:
 
 ```bash
 cd ~/Aletheia
@@ -312,13 +272,12 @@ python3 run.py \
     --age adult
 ```
 
-**Expected output (takes 2–5 minutes on first run, faster after):**
+**Takes 2–5 minutes on first run.** Expected output:
 ```
 Aletheia Diagnostic AI
 ────────────────────────────────────────
 Symptoms : fever, headache, neck stiffness
 Duration : 2 day(s)
-Patient  : adult, unknown
 Task     : initial_differential
 ────────────────────────────────────────
 Running inference...
@@ -326,20 +285,14 @@ Running inference...
 [142.3s]
 
 RANKED DIFFERENTIAL DIAGNOSIS:
-  1. Bacterial Meningitis          55%  ██████████████       [Critical]
-  2. Viral Meningitis              20%  ████                 [High]
-  3. Cerebral Malaria              15%  ███                  [Critical]
-  4. Severe Typhoid                 5%  █                    [High]
-
-PRIORITY INVESTIGATIONS:
-  1. Lumbar puncture + CSF analysis
-  2. Blood cultures x2 (before antibiotics)
-  3. Malaria RDT STAT
-  ...
+  1. Bacterial Meningitis    55%  ██████████  [Critical]
+  2. Viral Meningitis        20%  ████        [High]
+  3. Cerebral Malaria        15%  ███         [Critical]
+  4. Severe Typhoid           5%  █           [High]
 ```
 
-✅ **Pass if:** You see ranked differentials in the output
-❌ **Fail if:** You see "Model not found" or "llama-cli not found" — check Steps 2 and 3
+✅ **Pass if:** Ranked differentials appear in output
+❌ **Fail if:** "Model not found" — check Step 2 model download
 
 ---
 
@@ -349,17 +302,11 @@ PRIORITY INVESTIGATIONS:
 python3 chat/cli.py
 ```
 
-At the prompt:
-- Enter symptoms: `fever` → Enter, `chills` → Enter, `sweating` → Enter, then blank line
-- Duration: `3`
-- Age group: `5` (adult)
-- Sex: `unknown`
-- Task: `1` (differential diagnosis)
+Enter symptoms one by one, press blank line when done.
+Select task `1` for differential diagnosis.
+Type `n` to exit when asked "Assess another patient?"
 
-✅ **Pass if:** You see a formatted table of diagnoses
-❌ **Fail if:** Import errors — run `pip3 install rich` and try again
-
-Type `n` when asked "Assess another patient?" to exit.
+✅ **Pass if:** Formatted table of diagnoses appears
 
 ---
 
@@ -369,111 +316,68 @@ Type `n` when asked "Assess another patient?" to exit.
 python3 app.py
 ```
 
-**Expected output:**
-```
-Aletheia — Starting web interface...
-Open your browser at: http://localhost:7860
-```
+Open Firefox in the VM → go to **http://localhost:7860**
 
-Open Firefox inside the VM and go to **http://localhost:7860**
-
-You should see the Aletheia web interface with:
-- Symptoms text box
-- Duration slider
-- Age group and sex dropdowns
-- Reasoning task dropdown
-- 8 example cases on the left
-
-**Quick test:**
-1. Click any example case (e.g. "Meningitis")
+1. Click any example case
 2. Click **▶ Run Clinical Assessment**
-3. Wait for the result to appear in the tabs on the right
+3. Wait for results in the tabs on the right
 
-✅ **Pass if:** Results appear in the Differential Diagnosis tab
-❌ **Fail if:** Browser shows "This site can't be reached" — make sure `app.py` is still running
+✅ **Pass if:** Results appear in Differential Diagnosis tab
+❌ **Fail if:** "ImportError: cannot import name '_imaging' from PIL"
+   → Run: `pip3 install --upgrade Pillow` then try again
 
-To stop the web UI: go back to the terminal and press **Ctrl+C**
+To stop: press **Ctrl+C** in the terminal
 
 ---
 
 ### Test 4 — Verify RAM usage
 
-While the web UI is running (after running at least one query), check RAM:
+While web UI is running after at least one query:
 
 ```bash
-# In a second terminal
 free -h
 ```
 
-**Expected:**
-```
-              total        used        free
-Mem:           7.6Gi       3.8Gi       3.8Gi
-```
+Used RAM should be around **3.5–4.0 GB** — under the 7 GB ADTC ceiling.
 
-Used RAM should be around **3.5–4.0 GB** — well under the 7 GB ADTC ceiling.
-
-Also check with:
-```bash
-ps aux --sort=-%mem | head -5
-```
-
-✅ **Pass if:** Total used RAM is under 7,168 MB
-❌ **Fail if:** Used RAM exceeds 7 GB — switch to Q2K model:
-```bash
-# Edit inference/config.json
-# Change model_path to: models/aletheia_q2k.gguf
-```
+✅ **Pass if:** Total used RAM under 7,168 MB
 
 ---
 
 ### Test 5 — Verify offline operation
 
-**Disable the network adapter:**
-- VirtualBox → Devices → Network → uncheck "Connect Network Adapter"
+Disconnect network: VirtualBox → Devices → Network → uncheck "Connect Network Adapter"
 
-Then run a query:
 ```bash
 python3 run.py --symptoms "altered consciousness, fever, seizures" --duration 2 --age child
 ```
 
 ✅ **Pass if:** Query runs successfully with no internet
-❌ **Fail if:** Any network error — there should be none since Aletheia is fully offline
 
-Re-enable network when done:
-- VirtualBox → Devices → Network → check "Connect Network Adapter"
+Re-enable network when done.
 
 ---
 
 ## PART 5 — RUN THE ADTC PROFILER
 
-The official profiler measures your model's performance in the same
-way judges will. Run this to get your self-reported score.
-
-### Step 1 — Install Python 3.11 pip (if not already done)
-
-```bash
-python3 --version
-# Must show 3.11.x — if not, go back to Part 2 Step 2
-```
-
-### Step 2 — Add llama-bench to PATH
+### Step 1 — Add llama-bench to PATH
 
 The profiler uses `llama-bench` (different from `llama-cli`):
 
 ```bash
 export PATH="$HOME/llama.cpp/build/bin:$PATH"
 
-# Verify llama-bench exists
+# Verify
 llama-bench --version
 ```
 
-If `llama-bench` is not found, rebuild llama.cpp:
+To make this permanent:
 ```bash
-cmake --build ~/llama.cpp/build --config Release -j$(nproc)
+echo 'export PATH="$HOME/llama.cpp/build/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-### Step 3 — Run the profiler script
+### Step 2 — Run the profiler
 
 ```bash
 cd ~/Aletheia
@@ -482,63 +386,20 @@ bash benchmark/run_adtc_profiler.sh
 
 This will:
 1. Check Python 3.11 and llama-bench are available
-2. Install the official `adtc-profiler` package
+2. Install the official `adtc-profiler` package from GitHub
 3. Run participant-mode profiling against your repo
-4. Print your results and scoring breakdown
+4. Print results and scoring breakdown
+5. Save results to `benchmark/submission.json`
 
-**Expected output:**
-```
-╔══════════════════════════════════════════════════════╗
-║  Aletheia — ADTC 2026 Official Profiler             ║
-║  Mode: Participant (local self-check)                ║
-╚══════════════════════════════════════════════════════╝
-
-[ 1/4 ] Checking prerequisites...
-  Python 3.11.x ✅
-  llama-bench found ✅
-  Model: 1.8G ✅
-
-[ 2/4 ] Installing ADTC profiler... ✅
-
-[ 3/4 ] Running profiler in participant mode...
-
-[ 4/4 ] Results:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ADTC 2026 PROFILER RESULTS — Aletheia
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Tokens per second   : X.X
-  First token latency : XXXX ms
-  Peak RAM            : XXXX MB
-  Steady-state RAM    : XXXX MB
-  ADTC ceiling        : 7,168 MB
-  Margin              : XXXX MB  ✅ PASS
-
-  SCORING FORMULA:
-  S = 0.50×Accuracy + 0.30×Throughput + 0.20×Efficiency
-
-  Throughput score    : XX.X/100
-  Efficiency score    : XX.X/100
-
-  Results saved: benchmark/submission.json
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  ➡  Copy these numbers to the Devpost
-     Self-Reported Profiler Score field.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
-### Step 4 — Read the full results file
+### Step 3 — Read the full results
 
 ```bash
 cat ~/Aletheia/benchmark/submission.json | python3 -m json.tool
 ```
 
-This shows all metrics in detail.
+### Step 4 — Fill in Devpost Self-Reported Profiler Score
 
-### Step 5 — Fill in the Devpost Self-Reported Profiler Score
-
-From the results, copy:
+Copy from results:
 - **Tokens per second** → Throughput field
 - **Peak RAM (MB)** → Memory field
 - **First token latency (ms)** → Latency field
@@ -547,177 +408,108 @@ From the results, copy:
 
 ## PART 6 — RECORD THE DEMO VIDEO
 
-The demo video should show:
+1. Show VM open — Ubuntu 22.04
+2. Open system monitor — show 8 GB RAM total
+3. Disconnect internet
+4. Run: `python3 app.py`
+5. Open browser → http://localhost:7860
+6. Run 3 clinical cases (meningitis, eclampsia, SAM)
+7. Show RAM: `free -h` in second terminal
+8. Show offline — try opening a website, it fails
+9. Run: `bash benchmark/run_adtc_profiler.sh`
+10. Show results
 
-1. **Start with the VM open** — show it is Ubuntu 22.04
-2. **Open system monitor** — show 8 GB RAM total
-3. **Disable internet** (Network → disconnect)
-4. **Start the web UI:** `python3 app.py`
-5. **Open browser** → http://localhost:7860
-6. **Run 3 example cases:**
-   - Meningitis (fever, headache, neck stiffness)
-   - Eclampsia (seizures in pregnancy, high BP)
-   - Severe acute malnutrition (wasting, oedema, child)
-7. **Show RAM usage** while model is running: `free -h` in terminal
-8. **Show it is offline** — try to open a website, it fails
-9. **Run the profiler:** `bash benchmark/run_adtc_profiler.sh`
-10. **Show the results** — peak RAM, tokens per second
-
-Keep the video under **3 minutes**. The key moments are:
-- No internet + model runs = offline-first ✅
-- RAM under 7 GB = ADTC compliant ✅
-- Clinical output looks correct = useful ✅
+Keep under **3 minutes**.
 
 ---
 
 ## TROUBLESHOOTING
 
-### "No module named apt_pkg" during install.sh
+### VM terminal won't open / VM freezes
 
+**Cause:** Disk is completely full.
+**Fix:** Shut down the VM and extend the disk (see below).
+
+### Extending the VM disk (from 25 GB to 60 GB)
+
+**Step 1 — Copy the disk at larger size:**
+1. In VirtualBox → Tools → Media (or File → Virtual Media Manager)
+2. Select your `.vdi` file → click **Copy**
+3. Set size to **60 GB** → VDI format → Finish
+4. Note the path of the new copy (e.g. `VMAletheia_copy.vdi`)
+
+**Step 2 — Attach the new disk:**
+1. VM → Settings → Storage
+2. Under Controller: SATA, remove the old disk
+3. Click the + icon → Hard disk → Add → browse to `VMAletheia_copy.vdi`
+4. Click OK
+
+**Step 3 — Extend partition inside Ubuntu:**
+```bash
+sudo apt install gparted -y
+sudo gparted
+```
+In GParted: right-click main partition → Resize/Move → drag to fill
+unallocated space → Apply → reboot.
+
+```bash
+sudo reboot
+df -h   # verify ~58 GB available
+```
+
+### "No module named apt_pkg"
 ```bash
 sudo apt install python3-apt -y
 bash install.sh
 ```
 
-If it still fails, use the manual setup steps in Part 3 Step 5 above.
+### "Unable to locate package python3.11-pip"
+```bash
+# Use curl method instead
+curl -sS https://bootstrap.pypa.io/get-pip.py | sudo python3.11
+```
+
+### "ImportError: cannot import name '_imaging' from PIL"
+```bash
+pip3 install --upgrade Pillow
+# Or if that fails:
+pip3 install --upgrade --force-reinstall Pillow gradio
+```
 
 ### "llama-cli not found"
 ```bash
-# Rebuild llama.cpp
-cmake -B ~/llama.cpp/build ~/llama.cpp -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=OFF
+cmake -B ~/llama.cpp/build ~/llama.cpp \
+    -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=OFF
 cmake --build ~/llama.cpp/build --config Release -j$(nproc)
 ```
 
-### "Model not found"
+### "llama-bench not found" (profiler)
 ```bash
-ls ~/Aletheia/models/
-# Check aletheia_q4km.gguf is there
-# If not, copy it from USB or re-download
+export PATH="$HOME/llama.cpp/build/bin:$PATH"
+llama-bench --version
 ```
 
-### Web UI won't open in browser
-```bash
-# Check app.py is still running
-# Try: python3 app.py &
-# Then open http://127.0.0.1:7860
-```
-
-### Inference too slow (>10 min per query)
-```bash
-# Check CPU cores available
-nproc
-# Edit inference/config.json — increase "threads" to match nproc
-```
-
-### Python version error from profiler
-```bash
-# Install Python 3.11 explicitly
-sudo apt install python3.11 -y
-python3.11 -m pip install \
-    "git+https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler.git"
-python3.11 -m adtc_profiler run \
-    --submission ~/Aletheia \
-    --mode participant \
-    --output ~/Aletheia/benchmark/submission.json \
-    --skip-accuracy
-```
+### gdown shows 1.93G but Drive shows 1.8GB
+Normal — same file, different units (GiB vs GB). No problem.
 
 ### RAM exceeds 7 GB
 ```bash
-# Switch to the Q2K fallback model
-# Edit inference/config.json:
-# "model_path": "/home/aletheia/Aletheia/models/aletheia_q2k.gguf"
+# Switch to Q2K fallback model in config
+sed -i 's/aletheia_q4km.gguf/aletheia_q2k.gguf/' \
+    ~/Aletheia/inference/config.json
 # Peak RAM ~2,990 MB — well within budget
 ```
+
+### Pull latest changes from GitHub
+```bash
+cd ~/Aletheia
+git pull
+```
+
+### VirtualBox "Failed to save settings" error
+Store the VM on C: drive, not an external drive.
+Or use the disk copy method above.
 
 ---
 
 *Aletheia is a research prototype. Not a licensed medical device.*
-
-
-
-
-Second model
-
-    # Use python3.11 explicitly to run gdown
-python3.11 -m gdown "1u5tRnskrBpmn-YmdNcFIQDWjKs9fK-yw" \
-    -O ~/Aletheia/models/aletheia_q2km.gguf
-
-
-ERROR WHEN APP.PY IS RUN
-
-The error is a PIL (Pillow) conflict — the system has an old Pillow version that conflicts with Gradio. Fix it:
-
-# Upgrade Pillow
-pip3 install --upgrade Pillow
-
-# Then run the app again
-python3 app.py
-
-IF THAT STILL FAILS
-
-# Force reinstall both
-pip3 install --upgrade --force-reinstall Pillow gradio
-
-# Try again
-python3 app.py
-
-
-# if you run out of space
-
-25 GB is small with everything installed. Extend to 60 GB. Here is the exact process:
-
-Step 1 — Shut down the VM cleanly
-In the VM terminal:
-
-sudo shutdown now
-
-Wait for VM to fully power off.
-
-Step 2 — Resize the disk on Windows
-Open Command Prompt as Administrator on Windows and run:
-"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyhd "E:\VMfolder\VMAletheia\VMAletheia.vdi" --resize 61440
-
-### 61440 = 60 GB in MB.
-## To find your exact .vdi file path:
-
-Open VirtualBox
-Select your VM → Settings → Storage
-Click the disk icon
-The full path is shown at the bottom
-
-Replace E:\VMfolder\VMAletheia\VMAletheia.vdi with your actual path.
-
-# Step 3 — Start the VM and extend the partition
-Boot the VM, then open a terminal:
-# Install GParted
-sudo apt install gparted -y
-
-# Open GParted
-sudo gparted
-
-In GParted:
-
-You will see your main partition with unallocated space after it
-Right-click the main partition → Resize/Move
-Drag the right edge all the way to fill unallocated space
-Click Apply → Apply again to confirm
-Close GParted
-
-# Reboot
-sudo reboot
-
-# After reboot verify:
-df -h
-
-# Should now show ~59 GB available
-
-Then continue from where you left off:
-cd ~/Aletheia
-
-# Fix Pillow first
-pip3 install --upgrade Pillow
-
-# Start web UI
-python3 app.py
-
