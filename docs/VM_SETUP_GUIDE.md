@@ -34,6 +34,12 @@ Download VirtualBox from https://www.virtualbox.org
 7. Display → Screen → uncheck **Enable 3D Acceleration**
 8. Click OK
 
+> ⚠️ **Store the VM on C: drive** (e.g. `C:\VMs\VMAletheia`), not on an
+> external or secondary drive (D:, E:). Storing on external drives causes
+> "Failed to save the settings" errors when adding shared folders.
+> If you already created the VM on another drive, move the entire VM
+> folder to C: and re-add it via Machine → Add.
+
 **Download Ubuntu 22.04 LTS:**
 ```
 https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso
@@ -151,49 +157,78 @@ This will automatically:
 
 The model warning is expected — you haven't downloaded it yet.
 
-### Step 3 — Copy the model file
+### Step 3 — Get the code from GitHub
 
-The model file (`aletheia_q4km.gguf`, 1.80 GB) is in your
-Google Drive at `MyDrive/arapai_output/gguf/aletheia_q4km.gguf`.
+```bash
+cd ~
+git clone https://github.com/JosephWalusimbi-eng/Aletheia.git
+cd Aletheia
+```
 
-**Option A — Download from Google Drive (if you have internet):**
+This gets all scripts, configs, and the full repo structure instantly.
+
+---
+
+### Step 4 — Download the model file from Google Drive
+
+The model file (`aletheia_q4km.gguf`, 1.80 GB) is too large for GitHub.
+Download it directly from Google Drive inside the VM.
+
+**Get the file ID:**
+1. Open Google Drive in the VM browser
+2. Go to `arapai_output/gguf/`
+3. Right-click `aletheia_q4km.gguf` → **Share** → **Copy link**
+4. The link looks like:
+   `https://drive.google.com/file/d/1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO/view?usp=sharing`
+5. The file ID is the part between `/d/` and `/view`
+
+**Download using gdown:**
 ```bash
 # Install gdown
 pip3 install gdown
 
-# Download (replace FILE_ID with your actual Drive file ID)
-gdown "https://drive.google.com/uc?id=YOUR_FILE_ID" \
+# Download (this is the actual Aletheia model file ID)
+gdown "1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
     -O ~/Aletheia/models/aletheia_q4km.gguf
 ```
 
-**Option B — Copy via USB drive:**
-1. Download `aletheia_q4km.gguf` from Drive to your host computer
-2. Copy it to a USB drive
-3. In VirtualBox: Devices → USB → select your USB drive
-4. In Ubuntu terminal:
+If gdown gives a "permission denied" or "quota exceeded" error:
 ```bash
-# Find the USB drive
-lsblk
-# Mount it (replace sdX1 with your actual device)
-sudo mount /dev/sdX1 /mnt
-# Copy the model
-cp /mnt/aletheia_q4km.gguf ~/Aletheia/models/
-sudo umount /mnt
+# Use the fuzzy URL method instead
+gdown --fuzzy \
+    "https://drive.google.com/file/d/1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO/view?usp=sharing" \
+    -O ~/Aletheia/models/aletheia_q4km.gguf
 ```
 
-**Option C — Shared folder (VirtualBox):**
-1. VirtualBox → Settings → Shared Folders → Add
-2. Host path: folder containing the GGUF file
-3. Mount point: `/media/shared`
-4. Auto-mount: yes
-```bash
-cp /media/shared/aletheia_q4km.gguf ~/Aletheia/models/
-```
-
-**Verify the model:**
+**Verify the download:**
 ```bash
 ls -lh ~/Aletheia/models/aletheia_q4km.gguf
 # Should show: ~1.8 GB
+```
+
+---
+
+### Step 5 — Run the install script
+
+Now that the repo and model are in place:
+
+```bash
+cd ~/Aletheia
+bash install.sh
+```
+
+> ⚠️ Note on VirtualBox Shared Folders: if you try to set up a shared
+> folder and get "Failed to save the settings" error, it is likely a
+> permissions issue with the drive where the VM is stored. Use the
+> gdown method above instead — it is simpler and more reliable.
+
+**Expected output:**
+```
+[ 1/5 ] Installing system dependencies... ✅
+[ 2/5 ] Installing Python packages...    ✅
+[ 3/5 ] Building llama.cpp (~3–5 min)... ✅
+[ 4/5 ] Writing configuration...         ✅
+[ 5/5 ] Checking model... aletheia_q4km.gguf (1.8G) ✅
 ```
 
 ---
