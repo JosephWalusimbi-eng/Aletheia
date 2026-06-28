@@ -233,6 +233,68 @@ bash install.sh
 
 ---
 
+### Troubleshooting install.sh — "No module named apt_pkg"
+
+If `bash install.sh` shows this error:
+
+```
+ModuleNotFoundError: No module named 'apt_pkg'
+E: Problem executing scripts APT::Update::Post-Invoke-Success
+```
+
+This is a known Ubuntu 22.04 issue when Python 3.11 is set as default
+but `python3-apt` was built for Python 3.10. Fix it first, then re-run:
+
+```bash
+# Fix apt_pkg
+sudo apt install python3-apt -y
+
+# Re-run install
+bash install.sh
+```
+
+If the error persists, bypass install.sh and set up manually:
+
+```bash
+# Step A — System dependencies
+sudo apt-get install -y build-essential cmake git libgomp1
+
+# Step B — Python packages
+pip3 install rich typer requests gradio
+
+# Step C — Clone and build llama.cpp
+git clone https://github.com/ggerganov/llama.cpp ~/llama.cpp --depth=1
+cmake -B ~/llama.cpp/build ~/llama.cpp \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DGGML_CUDA=OFF \
+    -Wno-dev
+cmake --build ~/llama.cpp/build --config Release -j$(nproc)
+echo "llama.cpp built ✅"
+
+# Step D — Write config file
+# Replace 'joe' with your actual Ubuntu username (run: whoami)
+USERNAME=$(whoami)
+cat > ~/Aletheia/inference/config.json << EOF
+{
+  "llama_cli": "/home/${USERNAME}/llama.cpp/build/bin/llama-cli",
+  "model_path": "/home/${USERNAME}/Aletheia/models/aletheia_q4km.gguf",
+  "context_size": 1024,
+  "threads": $(nproc),
+  "max_tokens": 512,
+  "temperature": 0.1
+}
+EOF
+echo "Config written ✅"
+echo "Manual setup complete ✅"
+```
+
+Verify the config was written correctly:
+```bash
+cat ~/Aletheia/inference/config.json
+```
+
+---
+
 ## PART 4 — TEST FUNCTIONALITY
 
 Run each test in order. Each one confirms a different layer of the system.
@@ -509,6 +571,15 @@ Keep the video under **3 minutes**. The key moments are:
 ---
 
 ## TROUBLESHOOTING
+
+### "No module named apt_pkg" during install.sh
+
+```bash
+sudo apt install python3-apt -y
+bash install.sh
+```
+
+If it still fails, use the manual setup steps in Part 3 Step 5 above.
 
 ### "llama-cli not found"
 ```bash
