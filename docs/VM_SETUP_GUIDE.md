@@ -644,3 +644,20 @@ python3.11 -m gdown "1u5tRnskrBpmn-YmdNcFIQDWjKs9fK-yw" \
     -O ~/Aletheia/models/aletheia_q2km.gguf
 
 
+ERROR WHEN APP.PY IS RUN
+
+The error is a PIL (Pillow) conflict — the system has an old Pillow version that conflicts with Gradio. Fix it:
+
+# Upgrade Pillow
+pip3 install --upgrade Pillow
+
+# Then run the app again
+python3 app.py
+
+IF THAT STILL FAILS
+
+# Force reinstall both
+pip3 install --upgrade --force-reinstall Pillow gradio
+
+# Try again
+python3 app.py
