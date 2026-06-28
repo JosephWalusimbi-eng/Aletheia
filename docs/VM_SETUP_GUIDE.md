@@ -661,3 +661,63 @@ pip3 install --upgrade --force-reinstall Pillow gradio
 
 # Try again
 python3 app.py
+
+
+# if you run out of space
+
+25 GB is small with everything installed. Extend to 60 GB. Here is the exact process:
+
+Step 1 — Shut down the VM cleanly
+In the VM terminal:
+
+sudo shutdown now
+
+Wait for VM to fully power off.
+
+Step 2 — Resize the disk on Windows
+Open Command Prompt as Administrator on Windows and run:
+"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyhd "E:\VMfolder\VMAletheia\VMAletheia.vdi" --resize 61440
+
+### 61440 = 60 GB in MB.
+## To find your exact .vdi file path:
+
+Open VirtualBox
+Select your VM → Settings → Storage
+Click the disk icon
+The full path is shown at the bottom
+
+Replace E:\VMfolder\VMAletheia\VMAletheia.vdi with your actual path.
+
+# Step 3 — Start the VM and extend the partition
+Boot the VM, then open a terminal:
+# Install GParted
+sudo apt install gparted -y
+
+# Open GParted
+sudo gparted
+
+In GParted:
+
+You will see your main partition with unallocated space after it
+Right-click the main partition → Resize/Move
+Drag the right edge all the way to fill unallocated space
+Click Apply → Apply again to confirm
+Close GParted
+
+# Reboot
+sudo reboot
+
+# After reboot verify:
+df -h
+
+# Should now show ~59 GB available
+
+Then continue from where you left off:
+cd ~/Aletheia
+
+# Fix Pillow first
+pip3 install --upgrade Pillow
+
+# Start web UI
+python3 app.py
+
