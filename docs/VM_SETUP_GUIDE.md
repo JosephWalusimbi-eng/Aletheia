@@ -633,3 +633,36 @@ python3.11 -m adtc_profiler run \
 ---
 
 *Aletheia is a research prototype. Not a licensed medical device.*
+
+
+mannual
+
+
+# Install dependencies directly
+sudo apt-get install -y build-essential cmake git libgomp1
+
+# Install Python packages
+pip3 install rich typer requests gradio
+
+# Clone and build llama.cpp manually
+git clone https://github.com/ggerganov/llama.cpp ~/llama.cpp --depth=1
+cmake -B ~/llama.cpp/build ~/llama.cpp \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DGGML_CUDA=OFF \
+    -Wno-dev
+cmake --build ~/llama.cpp/build --config Release -j$(nproc)
+
+# Write config manually
+mkdir -p ~/Aletheia/inference
+cat > ~/Aletheia/inference/config.json << 'EOF'
+{
+  "llama_cli": "/root/llama.cpp/build/bin/llama-cli",
+  "model_path": "/root/Aletheia/models/aletheia_q4km.gguf",
+  "context_size": 1024,
+  "threads": 4,
+  "max_tokens": 512,
+  "temperature": 0.1
+}
+EOF
+
+echo "Setup complete ✅"
