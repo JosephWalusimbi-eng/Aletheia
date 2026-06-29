@@ -108,7 +108,9 @@ def format_output(result: dict) -> tuple[str, str, str, str, str]:
     raw = result.get("raw", "")
 
     # ── Differentials ─────────────────────────────────────────
-    diffs = response.get("ranked_differentials", [])
+    diffs = (response.get("ranked_differentials", []) or
+             response.get("differentials", []) or
+             response.get("differential_diagnosis", []))
     if diffs:
         diff_md = "| Rank | Condition | Probability | Severity |\n"
         diff_md += "|------|-----------|------------|----------|\n"
@@ -125,7 +127,9 @@ def format_output(result: dict) -> tuple[str, str, str, str, str]:
     # ── Tests ─────────────────────────────────────────────────
     tests = (response.get("priority_tests", []) +
              response.get("recommended_tests", []) +
-             response.get("additional_tests", []))
+             response.get("additional_tests", []) +
+             response.get("priority_investigations", []) +
+             response.get("investigations", []))
     if tests:
         tests_md = "\n".join(f"{i}. {t}" for i, t in enumerate(tests, 1))
     else:
@@ -186,7 +190,7 @@ def run_aletheia(
             age_group=age_group,
             sex=sex.lower(),
             reasoning_type=reasoning_type,
-            timeout=300,
+            timeout=600,
         )
         return format_output(result)
 
@@ -339,6 +343,7 @@ def build_ui():
                     sex_input, reasoning_input],
             outputs=[diff_output, tests_output, rationale_output,
                      rf_output, meta_output],
+            show_progress="full",
         )
 
         # Also trigger on Enter in symptoms box
@@ -359,10 +364,14 @@ if __name__ == "__main__":
     print("Open your browser at: http://localhost:7860\n")
 
     demo = build_ui()
+    demo.queue(
+        default_concurrency_limit=1,
+    )
     demo.launch(
         server_name="0.0.0.0",   # accessible on local network
         server_port=7860,
         share=False,              # no internet tunnel — stays fully offline
         inbrowser=True,           # auto-open browser
         show_error=True,
+        max_threads=1,
     )
