@@ -70,6 +70,11 @@ def run_llama(prompt: str, timeout: int = 600) -> tuple[str, float]:
     llama_bin = cfg["llama_cli"]
     model_path = cfg["model_path"]
 
+    print(f"[DEBUG] llama_bin: {llama_bin}")
+    print(f"[DEBUG] model_path: {model_path}")
+    print(f"[DEBUG] llama exists: {Path(llama_bin).exists()}")
+    print(f"[DEBUG] model exists: {Path(model_path).exists()}")
+
     if not Path(llama_bin).exists():
         raise FileNotFoundError(f"llama-cli not found: {llama_bin}\nRun: bash setup_venv.sh")
     if not Path(model_path).exists():
@@ -91,7 +96,11 @@ def run_llama(prompt: str, timeout: int = 600) -> tuple[str, float]:
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     elapsed = time.time() - t0
     if result.returncode != 0:
+        print(f"[DEBUG] returncode: {result.returncode}")
+        print(f"[DEBUG] stderr: {result.stderr[-300:]}")
         raise RuntimeError(f"llama-cli error:\n{result.stderr[-300:]}")
+    print(f"[DEBUG] stdout length: {len(result.stdout)}")
+    print(f"[DEBUG] stdout preview: {result.stdout[:200]}")
     return result.stdout.strip(), round(elapsed, 1)
 
 def parse_json(raw: str) -> dict:
