@@ -168,21 +168,38 @@ ls -lh ~/Aletheia/models/aletheia_q4km.gguf
 > ℹ️ gdown may show `1.93 G` while Google Drive shows `1.8 GB` — this
 > is normal. They are the same file in different units (GiB vs GB).
 
-### Step 3 — Run the install script
+### Step 3 — Set up the Python 3.11 virtual environment
+
+This is the recommended approach — everything runs inside an isolated
+venv, avoiding all system Python conflicts including the `apt_pkg` error.
 
 ```bash
 cd ~/Aletheia
-bash install.sh
+bash setup_venv.sh
 ```
+
+This single script:
+- Creates a Python 3.11 venv at `~/Aletheia/venv/`
+- Installs all Python packages inside the venv (gradio, rich, gdown, Pillow, etc.)
+- Builds llama.cpp for CPU inference
+- Writes the inference config file
+- Adds llama.cpp binaries to your PATH permanently
 
 **Expected output:**
 ```
-[ 1/5 ] Installing system dependencies... ✅
-[ 2/5 ] Installing Python packages...    ✅
-[ 3/5 ] Building llama.cpp (~3–5 min)... ✅
-[ 4/5 ] Writing configuration...         ✅
-[ 5/5 ] Checking model... aletheia_q4km.gguf (1.8G) ✅
+[ 1/5 ] Checking Python 3.11... Python 3.11.x ✅
+[ 2/5 ] Creating virtual environment... ✅
+[ 3/5 ] Activating venv and upgrading pip... ✅
+[ 4/5 ] Installing Python dependencies... ✅
+[ 5/5 ] Building llama.cpp (~3–5 min)... ✅
+Config written ✅
 ```
+
+> ⚠️ **After setup, always activate the venv before running anything:**
+> ```bash
+> source ~/Aletheia/venv/bin/activate
+> ```
+> You will see `(venv)` appear at the start of your prompt when active.
 
 ---
 

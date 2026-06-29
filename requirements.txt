@@ -1,5 +1,11 @@
+# Aletheia — Python dependencies
+# Install inside a Python 3.11 virtual environment
+# See: bash setup_venv.sh
+
 rich>=13.0.0
 typer>=0.9.0
 requests>=2.28.0
 huggingface-hub>=0.20.0
 gradio>=4.0.0
+Pillow>=10.0.0
+gdown>=6.0.0
