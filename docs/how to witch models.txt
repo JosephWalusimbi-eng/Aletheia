@@ -1,0 +1,40 @@
+
+#..in venv in project root
+
+# swap to the Swahili model and test:
+
+USERNAME=$(whoami)
+cat > ~/Aletheia/inference/config.json << EOF
+{
+  "llama_cli": "/home/${USERNAME}/llama.cpp/build/bin/llama-cli",
+  "model_path": "/home/${USERNAME}/Aletheia/models/aletheia_swahili_q4km.gguf",
+  "context_size": 1024,
+  "threads": 4,
+  "max_tokens": 512,
+  "temperature": 0.1
+}
+EOF
+
+python3 run.py \
+    --symptoms "homa, maumivu ya kichwa, ugumu wa shingo, kutapika" \
+    --duration 2 \
+    --age adult
+
+
+
+
+
+# Switch back to English model now for safety
+
+USERNAME=$(whoami)
+cat > ~/Aletheia/inference/config.json << EOF
+{
+  "llama_cli": "/home/${USERNAME}/llama.cpp/build/bin/llama-cli",
+  "model_path": "/home/${USERNAME}/Aletheia/models/aletheia_q4km.gguf",
+  "context_size": 1024,
+  "threads": 4,
+  "max_tokens": 512,
+  "temperature": 0.1
+}
+EOF
+
