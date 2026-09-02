@@ -395,7 +395,8 @@ python3 run.py --symptoms "heavy bleeding after delivery, pallor, tachycardia" -
 | ECE (Calibration) | 0.275 |
 | Training Loss (final) | 0.5197 |
 | Training Time (A100) | 1.92 hours |
-| Tokens per second (generation) | **5.68 t/s** |
+| Tokens per second (ADTC profiler) | **5.68 t/s** |
+| Tokens per second (tuned, 4 threads) | **7.10 t/s** |
 | First token latency (512-token prompt) | 30.0 s |
 | Peak RAM (ADTC profiler) | **3,281 MB** |
 | Steady-state RAM | 3,121 MB |

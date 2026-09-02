@@ -235,7 +235,7 @@ cat > ~/Aletheia/inference/config.json << EOF
   "llama_cli": "/home/${USERNAME}/llama.cpp/build/bin/llama-cli",
   "model_path": "/home/${USERNAME}/Aletheia/model/aletheia_q4km.gguf",
   "context_size": 1024,
-  "threads": $(nproc),
+  "threads": $(lscpu | awk -F: '/^Core\(s\) per socket/{gsub(/ /,"",$2);print $2}'),
   "max_tokens": 512,
   "temperature": 0.1
 }

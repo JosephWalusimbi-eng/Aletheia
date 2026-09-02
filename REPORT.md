@@ -49,6 +49,33 @@ All three pipeline stages use a `### System / ### Instruction / ### Input / ### 
 
 The system calls the llama.cpp binary as an external subprocess — `llama-completion` on current builds, falling back to `llama-cli` on older ones, since newer llama.cpp moved one-shot completion out of `llama-cli` into a separate binary. There are no Python model-loading libraries, no network calls during inference, and no external API dependencies. Once the model file and binary are on disk, the system runs with no internet connection required.
 
+### Runtime tuning
+
+Thread count is the single largest controllable factor in CPU inference speed, and the
+intuitive default is wrong. Configuring llama.cpp with one thread per logical core, the
+value `nproc` reports, was the worst setting available on our development machine.
+llama.cpp performs dense matrix multiplication, and two hyperthreads sharing one core's
+execution units contend for them rather than adding throughput.
+
+Measured with `llama-bench` on the Intel Core i5-8350U (4 physical cores, 8 logical):
+
+| Threads | Generation (tok/s) | Prompt eval (tok/s) |
+|---|---|---|
+| 2 | 6.51 | 18.00 |
+| **4** | **7.10** | 22.05 |
+| 6 | 6.72 | 22.67 |
+| 8 | 4.14 | 21.11 |
+
+Using 4 threads instead of 8 raised generation throughput by 71% and cut a full
+pipeline stage from 79 seconds to 46. The setup scripts now derive the default from
+`lscpu` physical core count rather than `nproc`.
+
+Because the optimum is hardware specific and the deployment target is not the
+development machine, the measurement ships as a tool rather than a hard-coded constant.
+`benchmark/optimize.sh` sweeps thread counts, reports the table above for the machine it
+runs on, and writes the fastest value into `inference/config.json`. It should be run
+once per deployment.
+
 ### Interfaces
 
 Three interfaces share a single inference layer (`inference/aletheia.py`):
@@ -69,6 +96,15 @@ Context size is set to 1024 tokens. At this context length, the Q4_K_M quantizat
 ### Connectivity
 
 Zero internet access during inference. The download script (`download_model.sh`) fetches weights once before use. After that, the system is fully air-gapped.
+
+Weights are hosted on Hugging Face (`Walusimbi/aletheia-q4km`) and fetched with
+`curl -L -C - --retry 5`. Hugging Face serves them over plain HTTPS with no credentials
+and honours range requests, so an interrupted transfer resumes rather than restarting.
+This matters on the connections the project targets: an earlier Google Drive host had no
+resume support and stalled twice during testing, and Drive additionally enforces a daily
+per-file quota that could block an evaluator entirely. The script verifies the exact byte
+count and the GGUF magic bytes before reporting success, so a truncated download is
+caught rather than silently accepted.
 
 ### Data and training constraints
 
@@ -106,6 +142,12 @@ All measurements produced by the ADTC profiler (`adtc-profiler 0.1.0`) running i
 
 These are the values in `benchmark/submission.json` in this repository, reproducible by
 running `bash benchmark/run_adtc_profiler.sh`.
+
+The profiler drives `llama-bench` with its own settings (512-token prompt, 128 generated
+tokens) and does not read `inference/config.json`, so the thread tuning described in
+section 2 does not change these figures. It changes what the application does: with 4
+threads a full Stage 1 completes in about 46 seconds against 79 at 8 threads, and a
+three-stage consultation runs in roughly 2 to 2.5 minutes.
 
 An earlier profiling run on Ubuntu 22.04.5 with an older llama.cpp build recorded
 3.71 t/s and 32.7 s to first token, with peak RSS of 3,273 MB. Memory was effectively

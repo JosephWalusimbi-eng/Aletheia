@@ -79,7 +79,9 @@ across 3 epochs.
 **Deployment:** The merged model was converted to GGUF format and quantised 
 to Q4_K_M (1.80 GB) using llama.cpp's two-step pipeline: F16 conversion 
 followed by llama-quantize. The inference engine is llama.cpp compiled for 
-CPU-only operation.
+CPU-only operation. Weights are hosted on
+Hugging Face and fetched by `download_model.sh` with a resumable transfer that
+verifies the exact byte count and GGUF magic bytes before reporting success.
 
 **Interface:** Three interfaces share a single inference layer. The web UI 
 is served by Python's standard library over a small JSON API, and the page 
@@ -117,6 +119,26 @@ the increased task diversity from MedMCQA, which exposes the model to
 broader question styles. Loss alone is an incomplete proxy for clinical 
 utility - accuracy is what matters.
 
+**Tracking a moving inference runtime:** llama.cpp changed underneath us during
+development. Newer builds turned `llama-cli` into a conversation-only front end
+that waits for interactive turns instead of completing a prompt and exiting, and
+moved one-shot completion into a separate `llama-completion` binary. The
+`--log-disable` flag also began suppressing generated tokens along with the
+logs. Both changes silently broke non-interactive inference, one by hanging and
+the other by returning empty output. Aletheia now detects the available binary
+at runtime and falls back gracefully, so the same code runs on old and new
+llama.cpp builds.
+
+**Cutting the web framework out:** the first web UI was built on a
+general-purpose framework, which pulled roughly 60 packages into an install
+intended for machines on metered or intermittent connections, and rendered a
+heavyweight JavaScript bundle before showing anything. We replaced it with a web
+UI served by the Python standard library and a single self-contained page. The
+install now pulls 16 packages, the page is 17 KB, and it loads in under 10 ms.
+For offline-first software, every dependency is something that has to be present
+on a machine that may never see the internet again.
+
+
 **Hyperthreading was making inference slower:** our setup scripts configured
 llama.cpp with one thread per logical core, the obvious default from `nproc`.
 On a 4 core, 8 thread i5 that turned out to be the worst available setting.
@@ -127,6 +149,17 @@ full pipeline stage from 79 seconds to 46. We shipped the measurement as a
 tuner (`benchmark/optimize.sh`) rather than hard-coding 4, because the right
 number is hardware specific and the deployment target is not the machine we
 develop on.
+
+**Hosting weights where they can actually be fetched:** the model was first
+hosted on Google Drive, which has no resume support and enforces a daily
+per-file quota. During testing the download stalled twice and had to be killed
+and restarted by hand. For a 1.8 GB file on an intermittent connection that is a
+real failure mode, and for an evaluator it would mean nothing to profile. We
+moved the weights to Hugging Face, which serves them over plain HTTPS with no
+credentials and honours range requests, so `curl -C -` resumes instead of
+restarting. We verified this by truncating a partial download to 500 MB and
+resuming: the result was byte-identical to the original.
+
 
 **CPU inference latency:** llama.cpp on CPU is slower than GPU inference. Under
 the ADTC profiler's own benchmark settings (a 512-token prompt and 128
@@ -169,6 +202,13 @@ framework would bring, which matters when the install happens over a
 metered or intermittent connection. The page is 17 KB and loads in under 
 10 ms.
 
+**71% more throughput from measurement rather than assumption.** Tuning thread
+count against physical rather than logical cores took generation from 4.14 to
+7.10 tokens per second on the same hardware, with no change to the model. The
+tuner ships with the project so the same gain is available on whatever machine
+it is deployed to.
+
+
 **3,281 MB measured peak RAM** - 3,887 MB below the ADTC ceiling. This is 
 not a tight squeeze. It is a comfortable margin that leaves room for the 
 operating system, other applications, and future model improvements.
@@ -198,6 +238,14 @@ model.** Getting from a trained model to something a clinical officer can
 actually run on an offline Ubuntu laptop required as much engineering 
 effort as the training itself - quantisation, compilation, inference 
 wrapping, and installation scripting.
+
+We learned that **the obvious default is worth measuring.** Using every core, and
+hosting a large file on the most convenient drive, are both reasonable-sounding
+decisions that turned out to cost us 71% of our throughput and a reliable
+download respectively. Neither was visible without measuring. On constrained
+hardware, the difference between a sensible guess and a measurement is most of
+the performance.
+
 
 Finally, our early Kiswahili experiments taught us that **automated 
 evaluation metrics can be quietly misleading in low-resource language 

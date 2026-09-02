@@ -111,7 +111,7 @@ Create the file `inference\config.json` inside the Aletheia folder. Use Notepad 
 
 To find the full path to the Aletheia folder quickly, open the folder in Explorer, click the address bar, and copy the path shown there.
 
-Adjust `threads` to match your CPU core count. For a 4-core machine use `4`; for 8 cores use `6` or `8`.
+Set `threads` to your **physical** core count, not the logical count `nproc` reports. llama.cpp does dense matrix work that does not benefit from hyperthreading, so one thread per logical core is usually slower. On a 4 core, 8 thread i5 we measured 7.10 tokens per second at 4 threads against 4.14 at 8. `lscpu` shows `Core(s) per socket`, or run `bash benchmark/optimize.sh` to measure and set it automatically.
 
 ### 1.6 Create a Python virtual environment
 
@@ -260,7 +260,7 @@ EOF
 
 Replace `YOUR_USERNAME` with your actual username. You can find it with `echo $USER`.
 
-Adjust `threads` to your CPU count: `nproc` prints the number of available cores.
+Set `threads` to your **physical** core count, not the logical count `nproc` reports. llama.cpp does dense matrix work that does not benefit from hyperthreading, so one thread per logical core is usually slower. On a 4 core, 8 thread i5 we measured 7.10 tokens per second at 4 threads against 4.14 at 8. `lscpu` shows `Core(s) per socket`, or run `bash benchmark/optimize.sh` to measure and set it automatically.
 
 ### 2.6 Create a Python virtual environment
 
@@ -546,7 +546,7 @@ The model path in `config.json` is wrong. Verify:
 ### Inference times out or is very slow
 
 - Lower `max_tokens` in `config.json` (try `256`) for faster responses during testing
-- Set `threads` to match your actual CPU core count (`nproc` on Ubuntu, Task Manager → Performance → Cores on Windows)
+- Set `threads` to your **physical** core count, not the logical count. Run `bash benchmark/optimize.sh` to measure the fastest value on your machine.
 - First inference is always slower because the model loads from disk; subsequent calls are faster
 
 ### "Address already in use"
