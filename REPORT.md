@@ -47,7 +47,7 @@ All three pipeline stages use a `### System / ### Instruction / ### Input / ### 
 
 ### Offline-first architecture
 
-The system calls `llama-cli` (the llama.cpp binary) as an external subprocess. There are no Python model-loading libraries, no network calls during inference, and no external API dependencies. Once the model file and binary are on disk, the system runs with no internet connection required.
+The system calls the llama.cpp binary as an external subprocess — `llama-completion` on current builds, falling back to `llama-cli` on older ones, since newer llama.cpp moved one-shot completion out of `llama-cli` into a separate binary. There are no Python model-loading libraries, no network calls during inference, and no external API dependencies. Once the model file and binary are on disk, the system runs with no internet connection required.
 
 ### Interfaces
 
@@ -62,7 +62,7 @@ Three interfaces share a single inference layer (`inference/aletheia.py`):
 
 ### Hardware
 
-Target hardware: a consumer laptop with 4 CPU cores and 8 GB RAM, integrated graphics only. No GPU acceleration is used (`-ngl 0` is passed to `llama-cli`). The system must remain within the 8 GB RAM profile during inference, including OS overhead.
+Target hardware: a consumer laptop with 4 CPU cores and 8 GB RAM, integrated graphics only. No GPU acceleration is used (`-ngl 0` is passed to the llama.cpp runner). The system must remain within the 8 GB RAM profile during inference, including OS overhead.
 
 Context size is set to 1024 tokens. At this context length, the Q4_K_M quantization keeps peak RSS well within the profiler's 7 GB scoring threshold for most models in the 3–8B parameter range.
 
@@ -88,19 +88,29 @@ All measurements produced by the ADTC profiler (`adtc-profiler 0.1.0`) running i
 
 | Metric | Value |
 |---|---|
-| Machine | Intel Core i5-8350U @ 1.70 GHz, 7.8 GB RAM, Ubuntu 22.04.5 LTS |
-| Inference runtime | llama.cpp (CPU only, `-ngl 0`) |
+| Machine | Intel Core i5-8350U @ 1.70 GHz |
+| RAM available | 9.7 GB |
+| OS | Ubuntu 26.04 LTS (WSL2) |
+| Inference runtime | llama.cpp b10733 (CPU only, `-ngl 0`) |
 | Quantization | GGUF Q4_K_M |
 | Model file size | 1.80 GB |
 | Prompt tokens (profiler run) | 512 |
 | Generated tokens (profiler run) | 128 |
-| Peak RSS | 3,273 MB |
-| Steady-state RSS | 3,155 MB |
-| Peak VMS | 3,757 MB |
-| Tokens per second (generation) | **3.71 t/s** |
-| First token latency (512-token prompt) | 32,725 ms (32.7 s) |
-| CPU utilization (p99) | 90.5% |
+| Peak RSS | 3,281 MB |
+| Steady-state RSS | 3,121 MB |
+| Peak VMS | 3,771 MB |
+| Tokens per second (generation) | **5.68 t/s** |
+| First token latency (512-token prompt) | 29,986 ms (30.0 s) |
+| CPU utilization (p99) | 51.0% |
 | Throttled | No |
+
+These are the values in `benchmark/submission.json` in this repository, reproducible by
+running `bash benchmark/run_adtc_profiler.sh`.
+
+An earlier profiling run on Ubuntu 22.04.5 with an older llama.cpp build recorded
+3.71 t/s and 32.7 s to first token, with peak RSS of 3,273 MB. Memory was effectively
+identical (within 0.25%); the throughput difference comes from the llama.cpp build. The
+figures above supersede it.
 
 First-token latency above is for a 512-token stress prompt. Typical Stage 1 prompts are 50–100 tokens and will produce substantially lower first-token latency.
 
@@ -108,7 +118,7 @@ First-token latency above is for a 512-token stress prompt. Typical Stage 1 prom
 
 | Metric | Value | ADTC Limit | Status |
 |---|---|---|---|
-| Peak RSS | 3,273 MB | 7,168 MB | **✅ PASS** (3,895 MB margin) |
+| Peak RSS | 3,281 MB | 7,168 MB | **✅ PASS** (3,887 MB margin) |
 | Internet required at inference | None | None | **✅ PASS** |
 | GPU required | None | None | **✅ PASS** |
 | African use case | Healthcare, Uganda | +10 pts bonus | **✅ YES** |
@@ -116,6 +126,10 @@ First-token latency above is for a 512-token stress prompt. Typical Stage 1 prom
 ### Clinical Accuracy
 
 Evaluated on a 3,000-sample held-out set drawn from the same 50-condition distribution as training data.
+
+> These figures come from our own held-out evaluation, not from the ADTC profiler. The
+> profiler was run with `--skip-accuracy`, so the `accuracy` array in
+> `benchmark/submission.json` is intentionally empty.
 
 | Metric | Value |
 |---|---|

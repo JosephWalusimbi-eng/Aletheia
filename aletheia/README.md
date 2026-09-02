@@ -432,6 +432,7 @@ Aletheia/
 ├── install.sh                 ← System dependencies + llama.cpp build
 ├── setup_venv.sh              ← Python 3.11 virtual environment setup
 ├── download_model.sh          ← Automated model download
+├── start_aletheia.sh          ← Launcher (starts the web UI + browser)
 ├── run.py                     ← Single-stage CLI
 ├── cli.py                     ← Interactive terminal (all three stages)
 ├── aletheia/

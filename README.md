@@ -50,6 +50,22 @@ After the clinician enters the actual investigation results, Aletheia produces:
 
 ## Interfaces
 
+### Launcher (`start_aletheia.sh`)
+Starts the web UI and opens it in the default browser, so a clinician never has to
+use a terminal:
+
+```bash
+bash start_aletheia.sh
+```
+
+It finds the virtual environment, checks that Gradio and the model file are present,
+waits for the server to come up, and opens the page. If Aletheia is already running it
+just reopens the tab. To add it to the desktop applications menu:
+
+```bash
+bash start_aletheia.sh --install-shortcut
+```
+
 ### Web UI (`aletheia/app.py`)
 A Gradio web interface with enforced stage ordering:
 - The Stage 2 button is disabled until Stage 1 completes successfully

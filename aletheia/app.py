@@ -12,6 +12,7 @@ Stage 2 button is disabled until Stage 1 succeeds.
 Stage 3 button is disabled until Stage 2 succeeds.
 """
 
+import os
 import sys
 import json
 import re
@@ -477,7 +478,8 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         server_port=7860,
         share=False,
-        inbrowser=True,
+        # the launcher opens the browser itself; avoid a duplicate tab
+        inbrowser=not os.environ.get("ALETHEIA_NO_BROWSER"),
         show_error=True,
         max_threads=1,
     )

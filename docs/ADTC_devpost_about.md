@@ -55,10 +55,9 @@ sub-Saharan Africa, including cerebral malaria, bacterial meningitis,
 eclampsia, postpartum haemorrhage, severe acute malnutrition, neonatal 
 sepsis, snake envenomation, visceral leishmaniasis, and tuberculosis.
 
-It runs entirely on an Intel Core i5, 8 GB DDR4 laptop running Ubuntu 22.04, 
-with no internet connection, no GPU, and no cloud dependency. Measured peak 
-RAM usage is 3,273 MB — leaving over 3,800 MB of headroom within the 8 GB 
-hardware ceiling.
+It runs entirely on an Intel Core i5 laptop with no internet connection, no 
+GPU, and no cloud dependency. Measured peak RAM usage is 3,281 MB, leaving 
+3,887 MB of headroom beneath the 7,168 MB ADTC memory ceiling.
 
 ## How we built it
 
@@ -71,7 +70,8 @@ projection layers, training 59,867,136 parameters (1.94% of total).
 Training ran on Google Colab Pro (NVIDIA A100-SXM4-80GB) for 1.92 hours 
 across 3 epochs.
 
-**Dataset:** 27,000 clinical reasoning samples across 3 sources:
+**Dataset:** 30,000 clinical reasoning samples across 3 sources, split 
+27,000 train / 3,000 held-out eval:
 - 18,000 Africa-weighted synthetic samples (50 conditions, 8 reasoning types)
 - 6,000 MedQA-USMLE filtered questions
 - 6,000 MedMCQA filtered questions
@@ -111,11 +111,12 @@ utility - accuracy is what matters.
 
 **CPU inference latency:** llama.cpp on CPU is slower than GPU inference. 
 On our development machine (Intel Core i5-8350U — older than the ADTC 
-target), a 512-token prompt produces a first token in 32.7 seconds, after 
-which generation proceeds at 3.71 tokens per second. On the ADTC target 
-hardware (i5 10th–12th gen) these numbers will improve. A full three-stage 
-case takes roughly 2–3 minutes end-to-end — acceptable for a clinical 
-consultation where structured reasoning time is normal, and substantially 
+target), a 512-token stress prompt produces a first token in 30.0 seconds, 
+after which generation proceeds at 5.68 tokens per second. On the ADTC 
+target hardware (i5 10th–12th gen) we expect further improvement. Typical 
+Stage 1 prompts are 50–100 tokens, well under the 512-token stress case, 
+and a full three-stage consultation takes roughly 2–3 minutes end-to-end — 
+acceptable where structured reasoning time is normal, and substantially 
 faster than waiting for a specialist referral.
 
 **Early-stage multilingual fine-tuning:** We began extending Aletheia to 
@@ -131,16 +132,17 @@ this work, but English is the validated language for this submission.
 
 ## Accomplishments that we're proud of
 
-**100% Top-3 accuracy** - the correct diagnosis appears in Aletheia's top 
-3 suggestions for every single test case. In clinical practice, this means 
-a clinician reviewing three ranked options will almost never miss the 
-correct diagnosis.
+**100% Top-3 accuracy** on our 3,000-sample held-out evaluation set - the 
+correct diagnosis appears in Aletheia's top 3 suggestions for every test 
+case. In clinical practice, this means a clinician reviewing three ranked 
+options will almost never miss the correct diagnosis. (These are our own 
+held-out figures; the ADTC profiler was run with `--skip-accuracy`.)
 
 **1.80 GB deployment** - a 3-billion parameter clinical reasoning model 
 compressed to under 2 GB without meaningful quality loss. It fits on a 
 USB drive.
 
-**3,273 MB measured peak RAM** - 3,895 MB below the ADTC ceiling. This is 
+**3,281 MB measured peak RAM** - 3,887 MB below the ADTC ceiling. This is 
 not a tight squeeze — it is a comfortable margin that leaves room for the 
 operating system, other applications, and future model improvements.
 
