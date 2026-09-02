@@ -34,10 +34,10 @@ Aletheia runs the entire clinical reasoning pipeline **on-device**:
 - ✅ **No internet required** — ever, at inference time
 - ✅ **No GPU required** — runs on CPU only
 - ✅ **1.80 GB model file** — fits on a USB drive
-- ✅ **~3,880 MB peak RAM** — well within the 8 GB ADTC budget
-- ✅ **Web UI + CLI** — browser interface or terminal
+- ✅ **3,281 MB peak RAM** — 3,887 MB below the 7,168 MB ADTC ceiling
+- ✅ **Web UI + CLI** — browser interface or terminal, launched from a desktop icon
 - ✅ **50 clinical conditions** weighted for African disease epidemiology
-- ✅ **8 reasoning task types** — differential, tests, severity, management, red flags
+- ✅ **Three enforced reasoning stages** — follow-up questions, investigations, advisory
 
 ---
 
@@ -128,15 +128,19 @@ Aletheia has three ways to run — choose whichever suits your workflow.
 
 ### Option 1 — Web UI (Recommended)
 
-The web interface runs in your browser. Clean, visual, easy to use.
+The web interface runs in your browser and walks through all three stages in order.
+
+```bash
+bash start_aletheia.sh          # starts the server and opens the browser
+```
+
+Or start the server directly:
 
 ```bash
 python3 aletheia/app.py
 ```
 
-Your browser will open automatically at **http://localhost:7860**
-
-If it does not open automatically, navigate there manually.
+Either way the interface is at **http://localhost:7860**.
 
 **What the web UI looks like:**
 
@@ -145,46 +149,59 @@ If it does not open automatically, navigate there manually.
 │  ⚕ Aletheia Diagnostic AI                                       │
 │  Offline-first clinical decision support for sub-Saharan Africa │
 │  🔒 Fully Offline — No Internet Required                        │
-├─────────────────────────────┬───────────────────────────────────┤
-│  PATIENT PRESENTATION       │  ASSESSMENT                       │
-│                             │                                   │
-│  Symptoms:                  │  🩺 Differential Diagnosis        │
-│  [fever, headache, ...]     │  🔬 Investigations                │
-│                             │  📋 Clinical Rationale            │
-│  Duration: [slider]         │  ⚠️  Red Flags                   │
-│  Age group: [dropdown]      │  ℹ️  Metadata                    │
-│  Sex: [dropdown]            │                                   │
-│  Task: [dropdown]           │                                   │
-│                             │                                   │
-│  [▶ Run Clinical Assessment]│                                   │
-│                             │                                   │
-│  Example Cases:             │                                   │
-│  • Meningitis               │                                   │
-│  • Cerebral Malaria         │                                   │
-│  • Tuberculosis             │                                   │
-│  • Eclampsia                │                                   │
-│  • PPH                      │                                   │
-└─────────────────────────────┴───────────────────────────────────┘
+├─────────────────────────────────────────────────────────────────┤
+│  PATIENT PRESENTATION                                           │
+│  Symptoms: [fever, headache, neck stiffness, vomiting        ]  │
+│  Duration (days): [slider]   Age Group: [▾]   Sex: [▾]          │
+├─────────────────────────────────────────────────────────────────┤
+│  STEP 1 — Assess Presentation & Generate Follow-up Questions    │
+│  [▶  Run Step 1: Assess Symptoms]                               │
+│    Follow-up Questions  (answer all before Step 2)              │
+│    Tentative Differential  (context only — not yet actionable)  │
+│    ⚠️ Red Flags          📋 Clinical Rationale                  │
+├─────────────────────────────────────────────────────────────────┤
+│  STEP 2 — Answer Follow-up Questions → Investigations           │
+│  Answers to Follow-up Questions: [                           ]  │
+│  [▶  Run Step 2: Get Investigation Recommendations]             │
+│      ↑ disabled until Step 1 succeeds                           │
+│    Recommended Investigations  (perform these before Step 3)    │
+│    Working Differential  (context — not a confirmed diagnosis)  │
+├─────────────────────────────────────────────────────────────────┤
+│  STEP 3 — Enter Investigation Results → Clinical Advisory       │
+│  Investigation Results: [                                    ]  │
+│  [▶  Run Step 3: Get Clinical Advisory]                         │
+│      ↑ disabled until Step 2 succeeds                           │
+│    Clinical Advisory     📋 Final Rationale                     │
+├─────────────────────────────────────────────────────────────────┤
+│  Example Cases — Click to load, then run Step 1                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 **How to use the web UI:**
 
 1. Type symptoms in the **Symptoms** box, separated by commas
    - Example: `fever, headache, neck stiffness, vomiting`
-2. Set the **Duration** slider to how many days symptoms have been present
-3. Select the **Age Group** from the dropdown
-4. Select the **Sex** if known
-5. Choose the **Clinical Reasoning Task**:
-   - **Differential Diagnosis** — ranked list of possible diagnoses
-   - **Investigation Recommendations** — which tests to order first
-   - **Severity & Level of Care** — how urgent is this case
-   - **Immediate Management** — what to do right now
-   - **Follow-up Questions** — what to ask next to narrow the diagnosis
-   - **Red Flags Only** — immediate escalation triggers
-6. Click **▶ Run Clinical Assessment**
-7. Results appear in the tabs on the right
+2. Set **Duration (days)**, **Age Group**, and **Sex**
+3. Click **▶ Run Step 1: Assess Symptoms**. Aletheia returns the follow-up
+   questions to ask, a tentative differential for context, red flags, and its
+   clinical rationale. No investigations are suggested yet — by design.
+4. Answer the follow-up questions in **Answers to Follow-up Questions**, then
+   click **▶ Run Step 2: Get Investigation Recommendations**. Aletheia returns the investigations to perform, in
+   priority order, plus the working differential explaining the choice.
+5. Perform those investigations. Aletheia does not simulate them.
+6. Enter the real findings in **Investigation Results** and click
+   **▶ Run Step 3: Get Clinical Advisory** for the management advisory — likely diagnosis, confidence,
+   management options, and a suggested first step.
 
-**Or click any Example Case** to load a pre-filled presentation instantly.
+There is no task selector: severity, red flags and the differential are all part
+of the Step 1 output. The Step 2 and Step 3 buttons stay greyed out until the
+preceding stage succeeds, so the stages cannot be skipped.
+
+**Or click any Example Case** to load a pre-filled presentation (meningitis,
+cerebral malaria, pulmonary TB, eclampsia), then run Step 1.
+
+> Each stage takes roughly 40–60 seconds on an i5-class CPU. The button greys out
+> while the model is running — this is expected, not a hang.
 
 To stop the web UI: press `Ctrl+C` in the terminal.
 
@@ -373,10 +390,17 @@ python3 run.py --symptoms "heavy bleeding after delivery, pallor, tachycardia" -
 | ECE (Calibration) | 0.275 |
 | Training Loss (final) | 0.5197 |
 | Training Time (A100) | 1.92 hours |
-| Peak RAM — CLI | ~3,630 MB |
-| Peak RAM — Web UI | ~3,880 MB |
+| Tokens per second (generation) | **5.68 t/s** |
+| First token latency (512-token prompt) | 30.0 s |
+| Peak RAM (ADTC profiler) | **3,281 MB** |
+| Steady-state RAM | 3,121 MB |
 | ADTC Memory Ceiling | 7,168 MB |
+| Margin | 3,887 MB |
 | **ADTC Status** | ✅ **PASS** |
+
+Runtime figures are from the ADTC profiler on an Intel Core i5-8350U; see
+[REPORT.md](../REPORT.md) for the full environment. Accuracy figures are from our own
+3,000-sample held-out evaluation, not the profiler.
 
 ---
 
@@ -476,8 +500,7 @@ Aletheia/
 
 | Requirement | Value | Limit | Status |
 |-------------|-------|-------|--------|
-| Peak RAM (Web UI) | ~3,880 MB | 7,168 MB | ✅ PASS |
-| Peak RAM (CLI) | ~3,630 MB | 7,168 MB | ✅ PASS |
+| Peak RAM | 3,281 MB | 7,168 MB | ✅ PASS (3,887 MB margin) |
 | Internet at runtime | None | None | ✅ PASS |
 | GPU at runtime | None | None | ✅ PASS |
 | African use case | Healthcare, Uganda | Bonus +10 pts | ✅ YES |

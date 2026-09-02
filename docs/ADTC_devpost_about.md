@@ -88,7 +88,10 @@ Stage 3 is disabled until Stage 2 succeeds, making it impossible to skip
 steps. An interactive terminal CLI (`cli.py`) walks the clinician through 
 all three stages sequentially using Rich-formatted output. A single-stage 
 CLI (`run.py`) accepts `--stage` and `--extra` arguments for scripting and 
-profiler integration.
+profiler integration. A launcher script (`start_aletheia.sh`) starts the 
+web UI, waits for it to come up, and opens the browser; with 
+`--install-shortcut` it registers a desktop entry so Aletheia opens from 
+the applications menu without a terminal.
 
 ## Challenges we ran into
 
@@ -197,8 +200,11 @@ to rebuild the training data with greater per-condition lexical diversity
 before the next training run. English remains the validated submission 
 language for ADTC 2026.
 
-**Desktop GUI** - a lightweight graphical interface making Aletheia 
-accessible to non-technical clinical users without a terminal.
+**Packaged desktop application** - a launcher and desktop entry now ship 
+with Aletheia, so a clinician opens it from the applications menu rather 
+than a command line. What remains is a packaged installer that bundles the 
+Python runtime, llama.cpp binary, and model weights, so that first-time 
+setup needs no terminal either.
 
 **Regulatory pathway** - submission to the Uganda National Drug Authority 
 (NDA) under the software-as-a-medical-device framework.
