@@ -3,10 +3,10 @@
 > *From the Greek ἀλήθεια — truth, disclosure. The revealing of what is hidden.*
 
 [![ADTC 2026](https://img.shields.io/badge/ADTC%202026-Laptop%20LLM%20Track-blue)](https://adtc-2026.devpost.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
 [![Model: Qwen2.5-3B](https://img.shields.io/badge/Model-Qwen2.5--3B--Instruct-orange)](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct)
-[![RAM: ~3.9 GB](https://img.shields.io/badge/RAM-~3.9%20GB-brightgreen)](models/)
-[![Offline](https://img.shields.io/badge/Internet-Not%20Required-success)](install.sh)
+[![RAM: ~3.9 GB](https://img.shields.io/badge/RAM-~3.9%20GB-brightgreen)](#performance-metrics)
+[![Offline](https://img.shields.io/badge/Internet-Not%20Required-success)](../install.sh)
 
 **Aletheia** is an offline-first clinical decision support system designed for
 frontline healthcare workers in district hospitals and health centres across
@@ -88,6 +88,11 @@ sudo update-alternatives --set python3 /usr/bin/python3.11
 python3 --version
 ```
 
+> **On Ubuntu 24.04 and 26.04 this will not work.** deadsnakes publishes no 3.11
+> build for 26.04, so `apt install python3.11` fails outright. Use the `uv` route in
+> [SETUP_AND_TESTING.md](../SETUP_AND_TESTING.md) instead — it installs a
+> self-contained CPython 3.11 into your home directory and needs no `sudo`.
+
 ### Step 2 — Run the install script
 
 ```bash
@@ -110,8 +115,8 @@ bash download_model.sh
 
 This downloads `aletheia_q4km.gguf` (~1.80 GB) — the primary deployment model.
 
-> If automatic download fails, see [models/README.md](models/README.md) for
-> manual download instructions.
+> If automatic download fails, see
+> [SETUP_AND_TESTING.md](../SETUP_AND_TESTING.md) for manual download instructions.
 
 ---
 
@@ -126,7 +131,7 @@ Aletheia has three ways to run — choose whichever suits your workflow.
 The web interface runs in your browser. Clean, visual, easy to use.
 
 ```bash
-python3 app.py
+python3 aletheia/app.py
 ```
 
 Your browser will open automatically at **http://localhost:7860**
@@ -285,23 +290,36 @@ python3 run.py \
   --duration 2 \
   --age child \
   --sex female \
-  --task severity_assessment
+  --stage initial_with_followup
 ```
 
 ```bash
 python3 run.py --help
 ```
 
-**Available tasks:**
+**Available stages** (`--stage`):
 
-| Task flag | Description |
-|-----------|-------------|
-| `initial_differential` | Ranked differential diagnosis (default) |
-| `test_recommendation` | Investigation priorities |
-| `severity_assessment` | Severity and level of care |
-| `treatment_hint` | Immediate management |
-| `follow_up_questions` | Diagnostic follow-up questions |
-| `red_flag_identification` | Immediate escalation triggers |
+| Stage | Description | Requires `--extra` |
+|-------|-------------|--------------------|
+| `initial_with_followup` | Follow-up questions, tentative differential, red flags (default) | no |
+| `test_recommendation` | Investigation priorities | yes — the follow-up answers |
+| `advisory_conclusion` | Management advisory | yes — the investigation results |
+
+Severity, red flags and the differential are all part of the Stage 1 output — they
+are not separate stages.
+
+**All flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--symptoms`, `-s` | Comma-separated symptoms (required) |
+| `--duration`, `-d` | Duration in days (default: 1) |
+| `--age` | `neonate`, `infant`, `child`, `adolescent`, `adult`, `elderly` |
+| `--sex` | `male`, `female`, `unknown` |
+| `--stage` | Pipeline stage, as above |
+| `--extra` | Context for stages 2 and 3 |
+| `--json` | Emit the raw JSON response |
+| `--timeout` | Inference timeout in seconds (default: 600) |
 
 **Get JSON output:**
 
@@ -317,21 +335,29 @@ python3 run.py --symptoms "chest pain, sweating, arm pain" --duration 1 --json
 # Bacterial meningitis vs cerebral malaria
 python3 run.py --symptoms "fever, neck stiffness, headache, altered consciousness" --duration 2 --age adult
 
-# Eclampsia
-python3 run.py --symptoms "seizures, severe headache, high blood pressure, oedema" --duration 1 --age adult --sex female --task severity_assessment
+# Eclampsia — Stage 1 also returns severity and red flags
+python3 run.py --symptoms "seizures, severe headache, high blood pressure, oedema" --duration 1 --age adult --sex female
 
 # Severe acute malnutrition
-python3 run.py --symptoms "severe wasting, oedema, anorexia, hair changes" --duration 90 --age child --task immediate_management
+python3 run.py --symptoms "severe wasting, oedema, anorexia, hair changes" --duration 90 --age child
 
-# Pulmonary TB
-python3 run.py --symptoms "cough, weight loss, night sweats, haemoptysis" --duration 30 --task test_recommendation
+# Snake envenomation — red flags come back in the Stage 1 output
+python3 run.py --symptoms "bite wound, local swelling, coagulopathy signs, ptosis" --duration 0
 
-# Snake envenomation
-python3 run.py --symptoms "bite wound, local swelling, coagulopathy signs, ptosis" --duration 0 --task red_flag_identification
+# Pulmonary TB — Stage 2 needs the Stage 1 follow-up answers in --extra
+python3 run.py --symptoms "cough, weight loss, night sweats, haemoptysis" --duration 30 \
+    --stage test_recommendation \
+    --extra "Known TB contact, no previous TB treatment, HIV status unknown"
 
-# Postpartum haemorrhage
-python3 run.py --symptoms "heavy bleeding after delivery, pallor, tachycardia" --duration 0 --sex female --task treatment_hint
+# Postpartum haemorrhage — Stage 3 needs the investigation results in --extra
+python3 run.py --symptoms "heavy bleeding after delivery, pallor, tachycardia" --duration 0 --sex female \
+    --stage advisory_conclusion \
+    --extra "Hb 6.2 g/dL, uterus atonic, no cervical tear on inspection, BP 80/50"
 ```
+
+> `run.py` takes `--stage`, not `--task`. The valid stages are
+> `initial_with_followup` (default), `test_recommendation`, and
+> `advisory_conclusion`; the latter two require `--extra`. See `python3 run.py --help`.
 
 ---
 
@@ -397,25 +423,32 @@ Severe Malarial Anaemia
 
 ```
 Aletheia/
-├── README.md                  ← This file
-├── app.py                     ← Web UI (Gradio) ← START HERE
-├── install.sh                 ← One-command Ubuntu 22.04 setup
-├── run.py                     ← Single-query CLI
-├── requirements.txt           ← Python dependencies
+├── README.md                  ← Project overview
+├── SETUP_AND_TESTING.md       ← Full setup and testing guide
+├── REPORT.md                  ← Technical report
 ├── LICENSE
-├── chat/
-│   ├── __init__.py
-│   └── cli.py                 ← Interactive terminal chatbot
+├── metadata.json              ← ADTC submission descriptor
+├── requirements.txt           ← Python dependencies
+├── install.sh                 ← System dependencies + llama.cpp build
+├── setup_venv.sh              ← Python 3.11 virtual environment setup
+├── download_model.sh          ← Automated model download
+├── run.py                     ← Single-stage CLI
+├── cli.py                     ← Interactive terminal (all three stages)
+├── aletheia/
+│   ├── README.md              ← This file
+│   └── app.py                 ← Web UI (Gradio) ← START HERE
 ├── inference/
 │   ├── __init__.py
 │   └── aletheia.py            ← Core inference wrapper
-├── models/
-│   ├── README.md              ← Model download instructions
-│   └── download_model.sh      ← Automated model download
 ├── benchmark/
-│   └── benchmark.sh           ← ADTC compliance benchmark
-└── report/
-    └── ADTC_report.md         ← ADTC 2026 submission report
+│   ├── benchmark.sh           ← Custom compliance benchmark
+│   ├── run_adtc_profiler.sh   ← Official ADTC profiler runner
+│   ├── results.json           ← Output of benchmark.sh
+│   └── submission.json        ← Output of the ADTC profiler
+├── docs/                      ← Paper, video script, setup guides
+├── report/
+│   └── ADTC_report.md         ← ADTC 2026 submission report
+└── models/                    ← GGUF model — created by download_model.sh, gitignored
 ```
 
 ---
@@ -467,10 +500,10 @@ bash benchmark/run_adtc_profiler.sh
 ```
 
 This script will:
-1. Clone the official profiler from [github.com/Africa-Deep-Tech-Foundation/adtc-profiler](https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler)
-2. Install its dependencies
-3. Run it against `aletheia_q4km.gguf`
-4. Save results to `benchmark/adtc_profiler_results.json`
+1. Install the official profiler from [github.com/Africa-Deep-Tech-Foundation/adtc-profiler](https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler)
+2. Check prerequisites (Python ≥ 3.11, `llama-bench`, the model file)
+3. Run it against `aletheia_q4km.gguf` in participant mode
+4. Save results to `benchmark/submission.json`
 
 **Use the numbers from this output for the ADTC Self-Reported Profiler Score
 on your Devpost submission form.**
@@ -478,16 +511,20 @@ on your Devpost submission form.**
 You can also run the profiler manually:
 
 ```bash
-# Clone profiler
-git clone https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler.git
-cd adtc-profiler
+# Install the profiler (it ships as a pip package, not a script to clone)
+pip3 install "git+https://github.com/Africa-Deep-Tech-Foundation/adtc-profiler.git"
 
-# Install dependencies
-pip3 install -r requirements.txt
-
-# Run against Aletheia model
-python3 profiler.py --model ../models/aletheia_q4km.gguf
+# Run it against this submission directory — it reads the model path
+# and test prompts from metadata.json
+adtc-profiler run \
+    --submission . \
+    --mode participant \
+    --output benchmark/submission.json \
+    --skip-accuracy
 ```
+
+> `llama-bench` must be on your `PATH` (it is built alongside `llama-cli`):
+> `export PATH="$HOME/llama.cpp/build/bin:$PATH"`
 
 ---
 
