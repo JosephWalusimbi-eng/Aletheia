@@ -233,14 +233,14 @@ Verify it works:
 ### 2.4 Place the model file
 
 ```bash
-mkdir -p ~/Aletheia/models
-cp /path/to/your/aletheia_q4km.gguf ~/Aletheia/models/
+mkdir -p ~/Aletheia/model
+cp /path/to/your/aletheia_q4km.gguf ~/Aletheia/model/
 ```
 
 If you need to download a model from Hugging Face:
 ```bash
 pip install huggingface-hub
-huggingface-cli download <repo-id> <filename> --local-dir ~/Aletheia/models/
+huggingface-cli download <repo-id> <filename> --local-dir ~/Aletheia/model/
 ```
 
 ### 2.5 Create the configuration file
@@ -249,7 +249,7 @@ huggingface-cli download <repo-id> <filename> --local-dir ~/Aletheia/models/
 cat > ~/Aletheia/inference/config.json << 'EOF'
 {
     "llama_cli": "/home/YOUR_USERNAME/llama.cpp/build/bin/llama-cli",
-    "model_path": "/home/YOUR_USERNAME/Aletheia/models/aletheia_q4km.gguf",
+    "model_path": "/home/YOUR_USERNAME/Aletheia/model/aletheia_q4km.gguf",
     "context_size": 1024,
     "threads": 4,
     "max_tokens": 512,
@@ -541,7 +541,7 @@ The path in `inference/config.json` is wrong. Verify the path actually exists:
 The model path in `config.json` is wrong. Verify:
 
 **Windows:** `dir "C:\path\to\aletheia_q4km.gguf"`  
-**Ubuntu:** `ls ~/Aletheia/models/aletheia_q4km.gguf`
+**Ubuntu:** `ls ~/Aletheia/model/aletheia_q4km.gguf`
 
 ### Inference times out or is very slow
 

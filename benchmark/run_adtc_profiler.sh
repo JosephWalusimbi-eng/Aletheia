@@ -49,7 +49,7 @@ export PATH="$HOME/llama.cpp/build/bin:$PATH"
 echo "  llama-bench found ✅"
 
 # Model file check
-MODEL="$REPO_DIR/models/aletheia_q4km.gguf"
+MODEL="$REPO_DIR/model/aletheia_q4km.gguf"
 if [ ! -f "$MODEL" ]; then
     echo "  ❌  Model not found: $MODEL"
     echo "  Run: bash download_model.sh"

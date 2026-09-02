@@ -12,7 +12,7 @@ RESULTS_FILE="$REPO_DIR/benchmark/results.json"
 # The model normally lives in the repo, but inference/config.json is the per-machine
 # source of truth (it may point at a copy kept outside the repo). Prefer the repo copy,
 # fall back to whatever the config declares.
-MODEL="$REPO_DIR/models/aletheia_q4km.gguf"
+MODEL="$REPO_DIR/model/aletheia_q4km.gguf"
 CONFIG="$REPO_DIR/inference/config.json"
 if [ ! -f "$MODEL" ] && [ -f "$CONFIG" ]; then
     CONFIGURED=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('model_path',''))" "$CONFIG" 2>/dev/null || true)

@@ -149,19 +149,19 @@ pip3 install gdown
 
 # Download using the model file ID
 python3.11 -m gdown "1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
-    -O ~/Aletheia/models/aletheia_q4km.gguf
+    -O ~/Aletheia/model/aletheia_q4km.gguf
 ```
 
 If gdown gives a "permission denied" or quota error, use the fuzzy method:
 ```bash
 python3.11 -m gdown --fuzzy \
     "https://drive.google.com/file/d/1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO/view?usp=sharing" \
-    -O ~/Aletheia/models/aletheia_q4km.gguf
+    -O ~/Aletheia/model/aletheia_q4km.gguf
 ```
 
 **Verify the download:**
 ```bash
-ls -lh ~/Aletheia/models/aletheia_q4km.gguf
+ls -lh ~/Aletheia/model/aletheia_q4km.gguf
 # Should show: ~1.8 GB
 ```
 
@@ -241,7 +241,7 @@ mkdir -p ~/Aletheia/inference
 cat > ~/Aletheia/inference/config.json << EOF
 {
   "llama_cli": "/home/${USERNAME}/llama.cpp/build/bin/llama-cli",
-  "model_path": "/home/${USERNAME}/Aletheia/models/aletheia_q4km.gguf",
+  "model_path": "/home/${USERNAME}/Aletheia/model/aletheia_q4km.gguf",
   "context_size": 1024,
   "threads": $(nproc),
   "max_tokens": 512,

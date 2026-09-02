@@ -7,7 +7,7 @@ set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LLAMA_DIR="$HOME/llama.cpp"
-MODEL_DIR="$REPO_DIR/models"
+MODEL_DIR="$REPO_DIR/model"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"

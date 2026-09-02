@@ -130,7 +130,7 @@ Create `inference/config.json`:
 ```json
 {
     "llama_cli": "/path/to/llama.cpp/build/bin/llama-cli",
-    "model_path": "/path/to/models/aletheia_q4km.gguf",
+    "model_path": "/path/to/model/aletheia_q4km.gguf",
     "context_size": 1024,
     "threads": 4,
     "max_tokens": 512,
@@ -140,7 +140,7 @@ Create `inference/config.json`:
 
 If `config.json` is absent, the system falls back to:
 - `llama_cli`: `~/llama.cpp/build/bin/llama-cli`
-- `model_path`: `models/aletheia_q4km.gguf` (relative to project root)
+- `model_path`: `model/aletheia_q4km.gguf` (relative to project root)
 
 ---
 
@@ -156,7 +156,7 @@ aletheia/
 │   └── config.json         Runtime configuration (create this)
 ├── cli.py                  Interactive terminal interface
 ├── run.py                  Single-stage command-line tool
-└── models/                 Place GGUF model file here
+└── model/                  GGUF model file (downloaded, gitignored)
 ```
 
 ---

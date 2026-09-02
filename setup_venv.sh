@@ -97,7 +97,7 @@ mkdir -p "$REPO_DIR/inference"
 cat > "$REPO_DIR/inference/config.json" << CONFIGEOF
 {
   "llama_cli": "$HOME/llama.cpp/build/bin/llama-cli",
-  "model_path": "$REPO_DIR/models/aletheia_q4km.gguf",
+  "model_path": "$REPO_DIR/model/aletheia_q4km.gguf",
   "context_size": 1024,
   "threads": $(nproc),
   "max_tokens": 512,
@@ -107,7 +107,7 @@ CONFIGEOF
 echo "  Config written ✅"
 
 # ── Check model ───────────────────────────────────────────────
-MODEL="$REPO_DIR/models/aletheia_q4km.gguf"
+MODEL="$REPO_DIR/model/aletheia_q4km.gguf"
 if [ ! -f "$MODEL" ]; then
     echo ""
     echo "  ⚠️  Model file not found — download it:"

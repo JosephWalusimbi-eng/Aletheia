@@ -24,7 +24,7 @@ def load_config() -> dict:
             return json.load(f)
     return {
         "llama_cli": str(Path.home() / "llama.cpp/build/bin/llama-cli"),
-        "model_path": str(Path(__file__).parent.parent / "models/aletheia_q4km.gguf"),
+        "model_path": str(Path(__file__).parent.parent / "model/aletheia_q4km.gguf"),
         "context_size": 1024,
         "threads": os.cpu_count() or 4,
         "max_tokens": 512,

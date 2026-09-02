@@ -479,7 +479,7 @@ Aletheia/
 ├── docs/                      ← Paper, video script, setup guides
 ├── report/
 │   └── ADTC_report.md         ← ADTC 2026 submission report
-└── models/                    ← GGUF model — created by download_model.sh, gitignored
+└── model/                     ← GGUF model, created by download_model.sh, gitignored
 ```
 
 ---

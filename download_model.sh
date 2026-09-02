@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-MODEL_DIR="models"
+MODEL_DIR="model"
 MODEL_FILE="aletheia_q4km.gguf"
 GDRIVE_FILE_ID="1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO"
 

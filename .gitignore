@@ -81,3 +81,16 @@ ehthumbs.db
 logs/
 tmp/
 temp/
+
+# Demo and recording artefacts
+# The demo video and its script are working material, not part of the submission.
+docs/demo_script_2min.md
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+*.wav
+*.mp3
+*.m4a
+recordings/
