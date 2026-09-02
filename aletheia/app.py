@@ -326,6 +326,23 @@ def build_ui():
                     value="unknown",
                 )
 
+        # ── Example cases (kept beside the inputs they fill) ──
+        gr.Markdown("#### Example Cases — click one to fill the fields above, then run Step 1")
+        gr.Examples(
+            examples=[
+                ["fever, headache, neck stiffness, vomiting",               2,  "adult",   "unknown"],
+                ["altered consciousness, seizures, fever, pallor",           2,  "child",   "female"],
+                ["cough, weight loss, night sweats, haemoptysis",           30,  "adult",   "male"],
+                ["seizures, severe headache, high blood pressure, oedema",   1,  "adult",   "female"],
+                ["heavy bleeding after delivery, pallor, tachycardia",       0,  "adult",   "female"],
+                ["chest pain, sweating, left arm pain",                      1,  "elderly", "male"],
+                ["severe wasting, oedema, anorexia",                        90,  "child",   "unknown"],
+                ["bite wound, local swelling, ptosis",                       0,  "adult",   "male"],
+            ],
+            inputs=[symptoms_input, duration_input, age_input, sex_input],
+            label="Click any case to load it",
+        )
+
         # ── STEP 1 ────────────────────────────────────────────
         gr.HTML('<hr><span class="step-badge">STEP 1 — Assess Presentation &amp; Generate Follow-up Questions</span>')
         step1_btn = gr.Button("▶  Run Step 1: Assess Symptoms", variant="primary", size="lg")
@@ -412,23 +429,6 @@ def build_ui():
             with gr.Column(scale=1):
                 stage3_rat = gr.Markdown(label="📋 Final Rationale")
 
-        # ── Example cases ─────────────────────────────────────
-        gr.HTML('<hr>')
-        gr.Markdown("### Example Cases — Click to load, then run Step 1")
-        gr.Examples(
-            examples=[
-                ["fever, headache, neck stiffness, vomiting",               2,  "adult",   "unknown"],
-                ["altered consciousness, seizures, fever, pallor",           2,  "child",   "female"],
-                ["cough, weight loss, night sweats, haemoptysis",           30,  "adult",   "male"],
-                ["seizures, severe headache, high blood pressure, oedema",   1,  "adult",   "female"],
-                ["heavy bleeding after delivery, pallor, tachycardia",       0,  "adult",   "female"],
-                ["chest pain, sweating, left arm pain",                      1,  "elderly", "male"],
-                ["severe wasting, oedema, anorexia",                        90,  "child",   "unknown"],
-                ["bite wound, local swelling, ptosis",                       0,  "adult",   "male"],
-            ],
-            inputs=[symptoms_input, duration_input, age_input, sex_input],
-            label="Click any case to load it",
-        )
 
         gr.HTML("""
         <hr style="margin-top:24px; border-color:#dee2e6;">

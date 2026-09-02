@@ -153,6 +153,12 @@ Either way the interface is at **http://localhost:7860**.
 │  PATIENT PRESENTATION                                           │
 │  Symptoms: [fever, headache, neck stiffness, vomiting        ]  │
 │  Duration (days): [slider]   Age Group: [▾]   Sex: [▾]          │
+│                                                                 │
+│  Example Cases — click one to fill the fields above             │
+│    fever, headache, neck stiffness, vomiting    2   adult       │
+│    altered consciousness, seizures, fever       2   child       │
+│    cough, weight loss, night sweats             30  adult       │
+│    … 5 more                                                     │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 1 — Assess Presentation & Generate Follow-up Questions    │
 │  [▶  Run Step 1: Assess Symptoms]                               │
@@ -172,8 +178,6 @@ Either way the interface is at **http://localhost:7860**.
 │  [▶  Run Step 3: Get Clinical Advisory]                         │
 │      ↑ disabled until Step 2 succeeds                           │
 │    Clinical Advisory     📋 Final Rationale                     │
-├─────────────────────────────────────────────────────────────────┤
-│  Example Cases — Click to load, then run Step 1                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -197,8 +201,9 @@ There is no task selector: severity, red flags and the differential are all part
 of the Step 1 output. The Step 2 and Step 3 buttons stay greyed out until the
 preceding stage succeeds, so the stages cannot be skipped.
 
-**Or click any Example Case** to load a pre-filled presentation (meningitis,
-cerebral malaria, pulmonary TB, eclampsia), then run Step 1.
+**Or click any Example Case** — the table sits directly beneath the input fields
+and clicking a row fills them in (meningitis, cerebral malaria, pulmonary TB,
+eclampsia, postpartum haemorrhage and others). Then run Step 1.
 
 > Each stage takes roughly 40–60 seconds on an i5-class CPU. The button greys out
 > while the model is running — this is expected, not a hang.
