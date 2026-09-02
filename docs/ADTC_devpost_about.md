@@ -93,7 +93,10 @@ Rich-formatted output. A single-stage CLI (`run.py`) accepts `--stage` and
 `--extra` arguments for scripting and profiler integration. A launcher 
 script (`start_aletheia.sh`) starts the web UI, waits for it to come up, 
 and opens the browser; with `--install-shortcut` it registers a desktop 
-entry so Aletheia opens from the applications menu without a terminal.
+entry so Aletheia opens from the applications menu without a terminal. A tuner
+(`benchmark/optimize.sh`) measures generation throughput across thread counts
+on the machine it is installed on and writes the fastest setting into the
+runtime config.
 
 ## Challenges we ran into
 
@@ -114,15 +117,27 @@ the increased task diversity from MedMCQA, which exposes the model to
 broader question styles. Loss alone is an incomplete proxy for clinical 
 utility - accuracy is what matters.
 
-**CPU inference latency:** llama.cpp on CPU is slower than GPU inference. 
-On our development machine (Intel Core i5-8350U, older than the ADTC 
-target), a 512-token stress prompt produces a first token in 30.0 seconds, 
-after which generation proceeds at 5.68 tokens per second. On the ADTC 
-target hardware (i5 10th to 12th gen) we expect further improvement. Typical 
-Stage 1 prompts are 50 to 100 tokens, well under the 512-token stress case, 
-and a full three-stage consultation takes roughly 2 to 3 minutes end-to-end,
-acceptable where structured reasoning time is normal, and substantially 
-faster than waiting for a specialist referral.
+**Hyperthreading was making inference slower:** our setup scripts configured
+llama.cpp with one thread per logical core, the obvious default from `nproc`.
+On a 4 core, 8 thread i5 that turned out to be the worst available setting.
+llama.cpp does dense matrix work, and two threads sharing one core's execution
+units contend rather than cooperate. Measured on the development laptop: 4.14
+tokens per second at 8 threads against 7.10 at 4. Correcting the default cut a
+full pipeline stage from 79 seconds to 46. We shipped the measurement as a
+tuner (`benchmark/optimize.sh`) rather than hard-coding 4, because the right
+number is hardware specific and the deployment target is not the machine we
+develop on.
+
+**CPU inference latency:** llama.cpp on CPU is slower than GPU inference. Under
+the ADTC profiler's own benchmark settings (a 512-token prompt and 128
+generated tokens) our development machine reports a 30.0 second first token and
+5.68 tokens per second. Real Stage 1 prompts are 50 to 100 tokens, well under
+that stress case, and after thread tuning a full three-stage consultation takes
+roughly 2 to 2.5 minutes end-to-end. That is acceptable where structured
+reasoning time is normal, and substantially faster than waiting for a
+specialist referral. On the ADTC target hardware (i5 10th to 12th gen) we
+expect further improvement.
+
 
 **Early-stage multilingual fine-tuning:** We began extending Aletheia to 
 Kiswahili through continued fine-tuning from the existing LoRA adapter. 

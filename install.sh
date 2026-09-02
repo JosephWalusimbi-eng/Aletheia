@@ -59,12 +59,23 @@ fi
 
 # ── Write llama.cpp path to config ───────────────────────────
 echo "[ 4/5 ] Writing configuration..."
+# llama.cpp does dense matrix work that does not benefit from hyperthreading, so
+# default to physical cores rather than nproc. On a 4 core / 8 thread laptop this
+# measured 7.10 tok/s at 4 threads against 4.14 tok/s at 8. Run
+# `bash benchmark/optimize.sh` to measure and tune this for your own machine.
+PHYSICAL_CORES=$(lscpu 2>/dev/null | awk -F: '/^Core\(s\) per socket/{gsub(/ /,"",$2);print $2}')
+SOCKETS=$(lscpu 2>/dev/null | awk -F: '/^Socket\(s\)/{gsub(/ /,"",$2);print $2}')
+[ -z "${PHYSICAL_CORES:-}" ] && PHYSICAL_CORES=$(( $(nproc) / 2 ))
+[ -z "${SOCKETS:-}" ] && SOCKETS=1
+THREADS=$((PHYSICAL_CORES * SOCKETS))
+[ "$THREADS" -lt 1 ] && THREADS=$(nproc)
+
 cat > "$REPO_DIR/inference/config.json" << EOF
 {
   "llama_cli": "$HOME/llama.cpp/build/bin/llama-cli",
   "model_path": "$MODEL_DIR/aletheia_q4km.gguf",
   "context_size": 1024,
-  "threads": $(nproc),
+  "threads": $THREADS,
   "max_tokens": 512,
   "temperature": 0.1
 }

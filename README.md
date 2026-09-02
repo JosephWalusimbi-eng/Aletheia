@@ -138,6 +138,22 @@ Create `inference/config.json`:
 }
 ```
 
+### Tuning inference speed
+
+`benchmark/optimize.sh` measures generation throughput across thread counts and
+writes the fastest into `config.json`:
+
+```bash
+bash benchmark/optimize.sh              # measure and apply
+bash benchmark/optimize.sh --dry-run    # measure only
+```
+
+This is worth running once per machine. llama.cpp does dense matrix work that does
+not benefit from hyperthreading, so using every logical core is usually slower than
+using only the physical ones. On the development laptop (4 cores, 8 threads) the
+measured difference was 7.10 tokens per second at 4 threads against 4.14 at 8, which
+cut a full pipeline stage from 79 seconds to 46.
+
 If `config.json` is absent, the system falls back to:
 - `llama_cli`: `~/llama.cpp/build/bin/llama-cli`
 - `model_path`: `model/aletheia_q4km.gguf` (relative to project root)
