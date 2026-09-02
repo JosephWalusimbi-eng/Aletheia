@@ -8,7 +8,7 @@ This guide walks you through getting Aletheia running from scratch on both **Win
 
 There are two separate reasons for this floor:
 
-1. **Gradio 6.x** (the web UI library) requires Python 3.10 or higher - 3.9 and below will fail to install it.
+1. **The terminal UI** uses `rich`, which supports Python 3.8 and above, so it is not the binding constraint.
 2. **The ADTC profiler** (`adtc-profiler`) explicitly requires Python ≥ 3.11. You must run the profiler locally to generate benchmark numbers before submitting. If you are on 3.10, the profiler will refuse to run.
 
 Python 3.11 satisfies both constraints. Python 3.12+ has not been tested against Aletheia's dependencies.
@@ -120,7 +120,7 @@ Open a Command Prompt in the Aletheia folder (Shift + right-click → "Open Powe
 ```
 python -m venv venv
 venv\Scripts\activate
-pip install gradio rich
+pip install rich
 ```
 
 You should see `(venv)` at the start of your prompt after activation. You need to activate the venv every time you open a new terminal.
@@ -268,7 +268,7 @@ Adjust `threads` to your CPU count: `nproc` prints the number of available cores
 cd ~/Aletheia
 python3.11 -m venv venv
 source venv/bin/activate
-pip install gradio rich
+pip install rich
 ```
 
 > If your system default `python3` is not 3.11, use `python3.11` explicitly as shown above. You can confirm the venv is using 3.11 with `python --version` after activation.
@@ -465,16 +465,16 @@ Expected: the CLI prints a message explaining that results are required and ends
 
 ---
 
-## Part 6 - Testing the Web UI (`aletheia/app.py`)
+## Part 6 - Testing the Web UI (`aletheia/server.py`)
 
 **Windows** (from inside the Aletheia folder, with venv active):
 ```
-python aletheia\app.py
+python aletheia\server.py
 ```
 
 **Ubuntu:**
 ```bash
-python aletheia/app.py
+python aletheia/server.py
 ```
 
 The terminal will print `Open your browser at: http://localhost:7860`. A browser tab should open automatically.
@@ -549,14 +549,14 @@ The model path in `config.json` is wrong. Verify:
 - Set `threads` to match your actual CPU core count (`nproc` on Ubuntu, Task Manager → Performance → Cores on Windows)
 - First inference is always slower because the model loads from disk; subsequent calls are faster
 
-### Gradio "address already in use"
+### "Address already in use"
 
-Another process is using port 7860. Either stop it, or change the port in `aletheia/app.py` line:
+Another process is using port 7860. Either stop it, or change the port in `aletheia/server.py`:
 ```python
 server_port=7861,   # change to any free port
 ```
 
-### "ModuleNotFoundError: No module named 'gradio'"
+### "ModuleNotFoundError: No module named 'rich'"
 
 The virtual environment is not activated. Run:
 

@@ -180,7 +180,7 @@ bash setup_venv.sh
 
 This single script:
 - Creates a Python 3.11 venv at `~/Aletheia/venv/`
-- Installs all Python packages inside the venv (gradio, rich, gdown, Pillow, etc.)
+- Installs all Python packages inside the venv (rich, gdown)
 - Builds llama.cpp for CPU inference
 - Writes the inference config file
 - Adds llama.cpp binaries to your PATH permanently
@@ -224,7 +224,7 @@ If it still fails, bypass install.sh and set up manually:
 sudo apt-get install -y build-essential cmake git libgomp1
 
 # Step B — Python packages
-pip3 install rich typer requests gradio
+pip3 install rich gdown
 
 # Step C — Clone and build llama.cpp
 git clone https://github.com/ggerganov/llama.cpp ~/llama.cpp --depth=1
@@ -257,18 +257,10 @@ Verify the config:
 cat ~/Aletheia/inference/config.json
 ```
 
-### Step 4 — Fix Pillow (required for Gradio web UI)
+### Step 4 — Web UI dependencies
 
-Before running the web UI, upgrade Pillow to avoid an import error:
-
-```bash
-pip3 install --upgrade Pillow
-```
-
-If Gradio still fails after upgrading:
-```bash
-pip3 install --upgrade --force-reinstall Pillow gradio
-```
+None. The web UI is served by Python's standard library and the page carries its
+own CSS and JavaScript, so there is nothing extra to install or upgrade.
 
 ---
 
@@ -327,10 +319,10 @@ Type `n` to exit when asked "Assess another patient?"
 
 ---
 
-### Test 3 — Web UI (Gradio)
+### Test 3 — Web UI
 
 ```bash
-python3 app.py
+bash start_aletheia.sh
 ```
 
 Open Firefox in the VM → go to **http://localhost:7860**
@@ -428,7 +420,7 @@ Copy from results:
 1. Show VM open — Ubuntu 22.04
 2. Open system monitor — show 8 GB RAM total
 3. Disconnect internet
-4. Run: `python3 app.py`
+4. Run: `bash start_aletheia.sh`
 5. Open browser → http://localhost:7860
 6. Run 3 clinical cases (meningitis, eclampsia, SAM)
 7. Show RAM: `free -h` in second terminal
@@ -490,7 +482,7 @@ curl -sS https://bootstrap.pypa.io/get-pip.py | sudo python3.11
 ```bash
 pip3 install --upgrade Pillow
 # Or if that fails:
-pip3 install --upgrade --force-reinstall Pillow gradio
+pip3 install --upgrade --force-reinstall rich gdown
 ```
 
 ### "llama-cli not found"

@@ -364,7 +364,7 @@ to Q4\_K\_M (1.80\,GB) and Q2\_K (1.19\,GB) using
 Q4\_K\_M quantisation, which achieves approximately 98\% of F16
 quality at 31\% of the file size.
 
-The system provides two interfaces for clinical use: a terminal CLI for scripting and integration, and a web-based graphical user interface (GUI) built with Gradio \cite{aletheia_github} that runs locally in the browser without internet connectivity. Both interfaces accept structured clinical input and return structured JSON containing ranked differentials, recommended tests, rationale, and red flags.
+The system provides two interfaces for clinical use: a terminal CLI for scripting and integration, and a web-based graphical user interface (GUI) \cite{aletheia_github} served by the Python standard library, which runs locally in the browser without internet connectivity and requires no third-party web framework. Both interfaces accept structured clinical input and return structured JSON containing ranked differentials, recommended tests, rationale, and red flags.
 
 \subsection{Offline-First Architecture}
 
@@ -790,7 +790,7 @@ clinical evaluation, the following directions are planned:
         100+ clinical conditions;
 
   \item Development of a lightweight desktop application to
-        complement the existing Gradio web UI and terminal CLI,
+        complement the existing web UI and terminal CLI,
         making Aletheia accessible to non-technical clinical users;
 
   \item Kiswahili and Ateso language support to serve clinical

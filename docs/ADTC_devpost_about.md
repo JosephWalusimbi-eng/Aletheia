@@ -82,7 +82,7 @@ followed by llama-quantize. The inference engine is llama.cpp compiled for
 CPU-only operation.
 
 **Interface:** Three interfaces share a single inference layer. A 
-Gradio-based web UI running on localhost enforces stage ordering through 
+web UI running on localhost enforces stage ordering through 
 button state — the Stage 2 button is disabled until Stage 1 succeeds, and 
 Stage 3 is disabled until Stage 2 succeeds, making it impossible to skip 
 steps. An interactive terminal CLI (`cli.py`) walks the clinician through 

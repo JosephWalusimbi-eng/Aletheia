@@ -83,9 +83,9 @@ if port_is_open "$PY"; then
 fi
 
 # ── Preflight ─────────────────────────────────────────────────
-if ! "$PY" -c "import gradio" >/dev/null 2>&1; then
-    echo "  Gradio is not installed for $PY"
-    echo "  Run: bash setup_venv.sh"
+# The web UI is served by Python's standard library, so there is no package to check.
+if [ ! -f "$REPO_DIR/aletheia/server.py" ]; then
+    echo "  Missing $REPO_DIR/aletheia/server.py"
     exit 1
 fi
 
@@ -108,8 +108,7 @@ fi
 
 # ── Start ─────────────────────────────────────────────────────
 echo "  Starting Aletheia (this takes a few seconds)..."
-export ALETHEIA_NO_BROWSER=1   # the launcher opens the browser itself
-"$PY" "$REPO_DIR/aletheia/app.py" &
+"$PY" "$REPO_DIR/aletheia/server.py" &
 APP_PID=$!
 
 for _ in $(seq 1 90); do

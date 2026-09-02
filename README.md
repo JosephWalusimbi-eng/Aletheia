@@ -58,22 +58,27 @@ use a terminal:
 bash start_aletheia.sh
 ```
 
-It finds the virtual environment, checks that Gradio and the model file are present,
-waits for the server to come up, and opens the page. If Aletheia is already running it
+It finds the virtual environment, checks that the model file is present, waits for
+the server to come up, and opens the page. If Aletheia is already running it
 just reopens the tab. To add it to the desktop applications menu:
 
 ```bash
 bash start_aletheia.sh --install-shortcut
 ```
 
-### Web UI (`aletheia/app.py`)
-A Gradio web interface with enforced stage ordering:
+### Web UI (`aletheia/server.py`)
+A self-contained web interface with enforced stage ordering:
 - The Stage 2 button is disabled until Stage 1 completes successfully
 - The Stage 3 button is disabled until Stage 2 completes successfully
 - Each stage's primary output is prominently displayed
+- A live elapsed-second counter runs while the model is working
+
+It is served by Python's standard library over a small JSON API, and the page carries
+its own CSS and JavaScript. There is no web framework and no external asset, so it
+loads instantly and works with no internet connection.
 
 ```bash
-python3 aletheia/app.py
+python3 aletheia/server.py
 # Opens at http://localhost:7860
 ```
 
@@ -112,11 +117,12 @@ python3 run.py --symptoms "fever, headache" --duration 3 --json
 ## Setup
 
 ### Requirements
-- Python 3.11 (minimum; the ADTC profiler requires ≥ 3.11, Gradio 6.x requires ≥ 3.10, Python 3.12 untested)
+- Python 3.11 (minimum; the ADTC profiler requires ≥ 3.11, Python 3.12 untested)
 - [llama.cpp](https://github.com/ggerganov/llama.cpp) built locally (`llama-cli` binary)
 - A GGUF model file (e.g. `aletheia_q4km.gguf`)
-- `gradio` (web UI only) - installed automatically on first run
 - `rich` (terminal UI, optional) - `pip install rich`
+
+The web UI needs no third-party package: it runs on Python's standard library.
 
 ### Configuration
 Create `inference/config.json`:
@@ -143,7 +149,8 @@ If `config.json` is absent, the system falls back to:
 ```
 aletheia/
 ├── aletheia/
-│   └── app.py              Web UI (Gradio, three-stage enforced flow)
+│   ├── server.py           Web UI server (standard library, three-stage flow)
+│   └── ui/index.html       Web UI page (self-contained CSS and JavaScript)
 ├── inference/
 │   ├── aletheia.py         Core inference wrapper and prompt builder
 │   └── config.json         Runtime configuration (create this)

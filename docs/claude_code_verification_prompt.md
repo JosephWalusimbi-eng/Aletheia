@@ -4,7 +4,7 @@
 
 Do NOT assume the code is correct because it runs without errors or
 because variable/function names sound right. Read the actual logic
-in `app.py`, `cli.py`, and `inference/aletheia.py`, trace what
+in `aletheia/server.py`, `cli.py`, and `inference/aletheia.py`, trace what
 each step really sends to the model and really does with the
 response, and compare that against the exact specification below.
 Report mismatches honestly, including partial or "close enough"
@@ -70,7 +70,7 @@ plan presented as fact, with no language indicating the doctor
 retains decision authority? Quote the actual text shown to the
 user at this step.
 
-**Check 4 — Consistency between app.py and cli.py**
+**Check 4 — Consistency between the web UI and cli.py**
 Do BOTH interfaces implement the same 4-stage flow identically, or
 has one of them drifted from the other (e.g. one has 3 stages, the
 other has 4; one labels stage 2 differently than the other)? List

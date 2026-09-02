@@ -52,7 +52,7 @@ The system calls the llama.cpp binary as an external subprocess — `llama-compl
 ### Interfaces
 
 Three interfaces share a single inference layer (`inference/aletheia.py`):
-- **Web UI** (`aletheia/app.py`) - Gradio-based, enforces stage ordering via disabled buttons
+- **Web UI** (`aletheia/server.py` + `aletheia/ui/index.html`) - served by Python's standard library, enforces stage ordering via disabled buttons
 - **Terminal CLI** (`cli.py`) - sequential, requires non-empty input at each stage gate
 - **Single-stage CLI** (`run.py`) - for scripting and profiler integration; accepts `--stage` and `--extra` arguments
 

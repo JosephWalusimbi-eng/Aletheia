@@ -32,7 +32,7 @@ flow and should stay intact even if Scene 6 gets trimmed.
 
 - [ ] VM/laptop fully booted, no other apps running (avoid lag/notifications on screen)
 - [ ] Close all unrelated browser tabs and desktop icons
-- [ ] Gradio app (`app.py`) NOT yet started — you'll start it on camera
+- [ ] Aletheia (`start_aletheia.sh`) NOT yet started, you will start it on camera
 - [ ] Have `cli.py` or `run.py` ready in a terminal, NOT yet run
 - [ ] Wi-Fi currently ON (you'll disconnect it on camera as proof)
 - [ ] Pick ONE test case in advance and know it cold — recommend:
@@ -88,16 +88,16 @@ rush past it, this is your single most important proof shot.
 **Visual:** Open terminal, `cd ~/Aletheia`, run:
 ```bash
 source venv/bin/activate
-python3 app.py
+bash start_aletheia.sh
 ```
 Browser opens to `localhost:7860`
 
 **Script:**
-> "I'm launching Aletheia now — this is a Gradio interface running
+> "I'm launching Aletheia now, this is a local web interface running
 > locally on this machine. Notice the URL: localhost. Not a website.
 > Nothing leaving this laptop."
 
-**Note:** If `app.py` has any startup lag, you can speed this segment
+**Note:** If startup has any lag, you can speed this segment
 up 2x in editing — startup time isn't part of your performance claim,
 only inference time is, so no honesty issue compressing this part.
 

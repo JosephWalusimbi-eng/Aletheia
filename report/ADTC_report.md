@@ -82,7 +82,7 @@ size, well within the ADTC memory ceiling with 3,538 MB to spare.
 | Option | RAM overhead | Decision |
 |--------|-------------|----------|
 | Terminal CLI only | ~0 MB | Available |
-| **Gradio Web UI** | **~150 MB** | **✅ Selected (primary)** |
+| **Standard-library web UI** | **~0 MB** | **✅ Selected (primary)** |
 | Electron desktop app | ~400 MB | Future work |
 
 ### Inference Engine
@@ -106,7 +106,7 @@ size, well within the ADTC memory ceiling with 3,538 MB to spare.
 | TRL | 0.10.1 | SFT training loop |
 | bitsandbytes | 0.43.0+ | 4-bit quantisation during training |
 | llama.cpp | Latest | GGUF CPU inference |
-| Gradio | 4.0+ | Web UI interface |
+| Python standard library | 3.11 | Web UI server (`http.server`) |
 | Google Colab Pro | A100-SXM4-80GB | Training hardware |
 | MedQA-USMLE | — | Training data source |
 | MedMCQA | — | Training data source |

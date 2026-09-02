@@ -5,7 +5,7 @@
 [![ADTC 2026](https://img.shields.io/badge/ADTC%202026-Laptop%20LLM%20Track-blue)](https://adtc-2026.devpost.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
 [![Model: Qwen2.5-3B](https://img.shields.io/badge/Model-Qwen2.5--3B--Instruct-orange)](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct)
-[![RAM: ~3.9 GB](https://img.shields.io/badge/RAM-~3.9%20GB-brightgreen)](#performance-metrics)
+[![RAM: 3.2 GB](https://img.shields.io/badge/RAM-3.2%20GB-brightgreen)](#performance-metrics)
 [![Offline](https://img.shields.io/badge/Internet-Not%20Required-success)](../install.sh)
 
 **Aletheia** is an offline-first clinical decision support system designed for
@@ -101,7 +101,7 @@ bash install.sh
 
 This will automatically:
 - Install all system dependencies (cmake, build-essential, python3-pip)
-- Install Python packages (gradio, rich, requests)
+- Install Python packages (rich, gdown)
 - Clone and build llama.cpp for CPU-only inference
 - Write the inference configuration file
 
@@ -137,7 +137,7 @@ bash start_aletheia.sh          # starts the server and opens the browser
 Or start the server directly:
 
 ```bash
-python3 aletheia/app.py
+python3 aletheia/server.py
 ```
 
 Either way the interface is at **http://localhost:7860**.
@@ -145,68 +145,68 @@ Either way the interface is at **http://localhost:7860**.
 **What the web UI looks like:**
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  ⚕ Aletheia Diagnostic AI                                       │
-│  Offline-first clinical decision support for sub-Saharan Africa │
-│  🔒 Fully Offline — No Internet Required                        │
-├─────────────────────────────────────────────────────────────────┤
-│  PATIENT PRESENTATION                                           │
-│  Symptoms: [fever, headache, neck stiffness, vomiting        ]  │
-│  Duration (days): [slider]   Age Group: [▾]   Sex: [▾]          │
-│                                                                 │
-│  Example Cases — click one to fill the fields above             │
-│    fever, headache, neck stiffness, vomiting    2   adult       │
-│    altered consciousness, seizures, fever       2   child       │
-│    cough, weight loss, night sweats             30  adult       │
-│    … 5 more                                                     │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 1 — Assess Presentation & Generate Follow-up Questions    │
-│  [▶  Run Step 1: Assess Symptoms]                               │
-│    Follow-up Questions  (answer all before Step 2)              │
-│    Tentative Differential  (context only — not yet actionable)  │
-│    ⚠️ Red Flags          📋 Clinical Rationale                  │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 2 — Answer Follow-up Questions → Investigations           │
-│  Answers to Follow-up Questions: [                           ]  │
-│  [▶  Run Step 2: Get Investigation Recommendations]             │
-│      ↑ disabled until Step 1 succeeds                           │
-│    Recommended Investigations  (perform these before Step 3)    │
-│    Working Differential  (context — not a confirmed diagnosis)  │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 3 — Enter Investigation Results → Clinical Advisory       │
-│  Investigation Results: [                                    ]  │
-│  [▶  Run Step 3: Get Clinical Advisory]                         │
-│      ↑ disabled until Step 2 succeeds                           │
-│    Clinical Advisory     📋 Final Rationale                     │
-└─────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------+
+|  Aletheia Diagnostic AI                                         |
+|  Offline clinical decision support for district hospitals       |
+|  Fully offline. No internet required.                           |
++-----------------------------------------------------------------+
+|  Advisory only. Aletheia does not diagnose and does not         |
+|  prescribe. The treating clinician decides.                     |
++-----------------------------------------------------------------+
+|  PATIENT PRESENTATION                                           |
+|  Symptoms (separated by commas)                                 |
+|  [ fever, headache, neck stiffness, vomiting                 ]  |
+|  Duration (days) [ 2 ]   Age group [adult v]   Sex [unknown v]  |
+|  Example cases:  (Meningitis) (Cerebral malaria) (Pulmonary TB) |
+|                  (Eclampsia) (Postpartum haemorrhage) ...       |
++-----------------------------------------------------------------+
+|  STEP 1  Assess presentation and generate follow-up questions   |
+|  [        Run Step 1: Assess symptoms                        ]  |
+|  Follow-up questions (answer all)  |  Tentative differential    |
+|  Red flags                         |  Clinical rationale        |
++-----------------------------------------------------------------+
+|  STEP 2  Answer the follow-up questions, get investigations     |
+|  Answers to follow-up questions [                            ]  |
+|  [   Run Step 2: Get investigation recommendations           ]  |
+|      locked until Step 1 completes                              |
+|  Recommended investigations        |  Working differential      |
+|  Rationale for investigation selection                          |
++-----------------------------------------------------------------+
+|  STEP 3  Enter investigation results, get clinical advisory     |
+|  Investigation results [                                     ]  |
+|  [   Run Step 3: Get clinical advisory                       ]  |
+|      locked until Step 2 completes                              |
+|  Clinical advisory                                              |
++-----------------------------------------------------------------+
 ```
 
 **How to use the web UI:**
 
-1. Type symptoms in the **Symptoms** box, separated by commas
-   - Example: `fever, headache, neck stiffness, vomiting`
-2. Set **Duration (days)**, **Age Group**, and **Sex**
-3. Click **▶ Run Step 1: Assess Symptoms**. Aletheia returns the follow-up
-   questions to ask, a tentative differential for context, red flags, and its
-   clinical rationale. No investigations are suggested yet — by design.
-4. Answer the follow-up questions in **Answers to Follow-up Questions**, then
-   click **▶ Run Step 2: Get Investigation Recommendations**. Aletheia returns the investigations to perform, in
-   priority order, plus the working differential explaining the choice.
+1. Type symptoms in the **Symptoms** box, separated by commas.
+   Example: `fever, headache, neck stiffness, vomiting`
+2. Set **Duration (days)**, **Age group**, and **Sex**.
+3. Click **Run Step 1: Assess symptoms**. Aletheia returns the follow-up questions
+   to ask, a tentative differential for context, red flags, and its clinical
+   rationale. No investigations are suggested yet, by design.
+4. Answer the follow-up questions in **Answers to follow-up questions**, then click
+   **Run Step 2: Get investigation recommendations**. Aletheia returns the
+   investigations to perform in priority order, plus the working differential.
 5. Perform those investigations. Aletheia does not simulate them.
-6. Enter the real findings in **Investigation Results** and click
-   **▶ Run Step 3: Get Clinical Advisory** for the management advisory — likely diagnosis, confidence,
+6. Enter the real findings in **Investigation results** and click
+   **Run Step 3: Get clinical advisory** for the likely diagnosis, confidence,
    management options, and a suggested first step.
 
-There is no task selector: severity, red flags and the differential are all part
-of the Step 1 output. The Step 2 and Step 3 buttons stay greyed out until the
-preceding stage succeeds, so the stages cannot be skipped.
+There is no task selector. Severity, red flags and the differential are all part of
+the Step 1 output. Steps 2 and 3 stay dimmed and disabled until the preceding stage
+completes, so the stages cannot be skipped.
 
-**Or click any Example Case** — the table sits directly beneath the input fields
-and clicking a row fills them in (meningitis, cerebral malaria, pulmonary TB,
-eclampsia, postpartum haemorrhage and others). Then run Step 1.
+**Or click an example case.** The chips sit directly beneath the input fields and
+fill them in with one click (meningitis, cerebral malaria, pulmonary TB, eclampsia,
+postpartum haemorrhage, severe malnutrition, snake envenomation).
 
-> Each stage takes roughly 40–60 seconds on an i5-class CPU. The button greys out
-> while the model is running — this is expected, not a hang.
+> Each stage takes roughly 40 to 60 seconds on an i5-class CPU. A live counter shows
+> the elapsed seconds while the model is working, and the button is disabled until it
+> finishes. This is expected, not a hang.
 
 To stop the web UI: press `Ctrl+C` in the terminal.
 
@@ -466,7 +466,8 @@ Aletheia/
 ├── cli.py                     ← Interactive terminal (all three stages)
 ├── aletheia/
 │   ├── README.md              ← This file
-│   └── app.py                 ← Web UI (Gradio) ← START HERE
+│   ├── server.py              ← Web UI server ← START HERE
+│   └── ui/index.html          ← Web UI page (self-contained)
 ├── inference/
 │   ├── __init__.py
 │   └── aletheia.py            ← Core inference wrapper

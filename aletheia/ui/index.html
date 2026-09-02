@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aletheia - Clinical Decision Support</title>
+<style>
+/* Jade and white. The palette is fixed rather than following the operating system
+   theme, so the interface looks the same on every machine it is demonstrated on. */
+:root{
+  --bg:#f2f8f5; --surface:#ffffff; --surface-2:#f0f7f3; --line:#d5e7de;
+  --text:#12211b; --muted:#5a6e65;
+  --jade:#00a86b; --jade-dark:#046a4a; --jade-deep:#04513c;
+  --accent:#00a86b; --accent-ink:#ffffff;
+  --warn:#b45309; --warn-bg:#fff8e6;
+  --danger:#b42318; --danger-bg:#fdf1f0;
+  --shadow:0 1px 2px rgba(4,81,60,.06),0 1px 3px rgba(4,81,60,.10);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 18px 60px}
+
+header.top{
+  background:linear-gradient(135deg,var(--jade-deep),var(--jade-dark),var(--jade));
+  border-radius:14px;padding:22px 24px;margin-bottom:18px;
+}
+header.top h1{margin:0;font-size:1.5rem;color:#ffffff;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;color:#d6f2e6;font-size:.9rem}
+.pill{
+  display:inline-block;margin-top:10px;padding:3px 11px;border-radius:20px;
+  font-size:.75rem;font-weight:600;background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.45);color:#ffffff;
+}
+.notice{
+  background:var(--warn-bg);border-left:4px solid var(--warn);
+  padding:10px 14px;border-radius:8px;font-size:.85rem;margin-bottom:18px;color:var(--text);
+}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow);
+}
+.card.locked{opacity:.55}
+.card.locked .lockmsg{display:block}
+.lockmsg{display:none;font-size:.85rem;color:var(--muted);margin-top:10px}
+
+.badge{
+  display:inline-block;padding:4px 12px;border-radius:20px;font-size:.72rem;
+  font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+  background:var(--jade);color:#ffffff;border:1px solid var(--jade-dark);
+}
+h2{font-size:1.02rem;margin:12px 0 4px}
+.sub{color:var(--muted);font-size:.86rem;margin:0 0 12px}
+
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.grid,.grid3{grid-template-columns:1fr}}
+
+label{display:block;font-size:.82rem;font-weight:600;margin:0 0 5px;color:var(--muted)}
+textarea,input,select{
+  width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+  background:var(--surface-2);color:var(--text);font:inherit;font-size:.92rem;
+}
+textarea{resize:vertical;min-height:74px}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
+@media(max-width:640px){.row3{grid-template-columns:1fr}}
+
+button.run{
+  width:100%;margin-top:14px;padding:12px 16px;border:0;border-radius:10px;
+  background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;
+  font-size:.95rem;cursor:pointer;
+}
+button.run:hover:not(:disabled){filter:brightness(1.08)}
+button.run:disabled{opacity:.45;cursor:not-allowed}
+
+.examples{margin-top:14px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+.chip{
+  padding:6px 11px;border:1px solid var(--line);border-radius:18px;
+  background:var(--surface-2);color:var(--text);font-size:.8rem;cursor:pointer;
+}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+
+.panel{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+  padding:13px 15px;min-height:84px;font-size:.92rem;
+}
+.panel .empty{color:var(--muted);font-style:italic}
+.ptitle{font-weight:700;font-size:.9rem;margin:0 0 6px}
+.ptitle span{font-weight:400;color:var(--muted);font-size:.82rem}
+
+ol.qs{margin:0;padding-left:20px}
+ol.qs li{margin-bottom:7px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+.bar{height:5px;border-radius:3px;background:var(--accent);min-width:3px}
+.sev{font-size:.72rem;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.sev.Critical{background:var(--danger-bg);color:var(--danger)}
+.sev.High{color:var(--warn)}
+.sev.Moderate,.sev.Low{color:var(--muted)}
+ul.flags{list-style:none;margin:0;padding:0}
+ul.flags li{padding:6px 0 6px 22px;position:relative;color:var(--danger);font-weight:600}
+ul.flags li::before{content:"!";position:absolute;left:6px}
+
+.status{display:flex;align-items:center;gap:9px;margin-top:11px;font-size:.86rem;color:var(--muted)}
+.spin{
+  width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{color:var(--danger);font-weight:600}
+.handoff{
+  background:var(--surface-2);border:1px solid var(--accent);border-left-width:4px;
+  border-radius:9px;padding:11px 15px;margin-top:14px;font-size:.88rem;
+}
+.advisory-note{
+  border-top:1px solid var(--line);margin-top:12px;padding-top:10px;
+  font-size:.84rem;color:var(--muted);font-style:italic;
+}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:18px;
+  border-top:1px solid var(--line);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>Aletheia Diagnostic AI</h1>
+  <p>Offline clinical decision support for district hospitals in sub-Saharan Africa</p>
+  <span class="pill">Fully offline. No internet required.</span>
+</header>
+
+<div class="notice">
+  <strong>Advisory only.</strong> Aletheia does not diagnose and does not prescribe.
+  The treating clinician makes every final management decision.
+</div>
+
+<section class="card">
+  <span class="badge">Patient presentation</span>
+  <h2>Enter the presenting complaint</h2>
+  <div style="margin-top:10px">
+    <label for="symptoms">Symptoms (separated by commas)</label>
+    <textarea id="symptoms" placeholder="fever, headache, neck stiffness, vomiting"></textarea>
+  </div>
+  <div class="row3">
+    <div>
+      <label for="duration">Duration (days)</label>
+      <input id="duration" type="number" min="0" max="365" value="2">
+    </div>
+    <div>
+      <label for="age">Age group</label>
+      <select id="age">
+        <option>neonate</option><option>infant</option><option>child</option>
+        <option>adolescent</option><option selected>adult</option><option>elderly</option>
+      </select>
+    </div>
+    <div>
+      <label for="sex">Sex</label>
+      <select id="sex"><option selected>unknown</option><option>male</option><option>female</option></select>
+    </div>
+  </div>
+  <div class="examples">
+    <label>Example cases (click one to fill the fields above)</label>
+    <div class="chips" id="chips"></div>
+  </div>
+</section>
+
+<section class="card" id="card1">
+  <span class="badge">Step 1</span>
+  <h2>Assess presentation and generate follow-up questions</h2>
+  <p class="sub">No investigations are suggested yet. Tests come after the follow-up answers.</p>
+  <button class="run" id="btn1">Run Step 1: Assess symptoms</button>
+  <div class="status" id="st1"></div>
+  <div class="grid" style="margin-top:14px">
+    <div>
+      <p class="ptitle">Follow-up questions <span>(answer all before Step 2)</span></p>
+      <div class="panel" id="out1a"><span class="empty">Enter symptoms, then run Step 1.</span></div>
+    </div>
+    <div>
+      <p class="ptitle">Tentative differential <span>(context only)</span></p>
+      <div class="panel" id="out1b"><span class="empty">Awaiting Step 1.</span></div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:14px">
+    <div>
+      <p class="ptitle">Red flags</p>
+      <div class="panel" id="out1c"><span class="empty">Awaiting Step 1.</span></div>
+    </div>
+    <div>
+      <p class="ptitle">Clinical rationale</p>
+      <div class="panel" id="out1d"><span class="empty">Awaiting Step 1.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="card locked" id="card2">
+  <span class="badge">Step 2</span>
+  <h2>Answer the follow-up questions, get investigations</h2>
+  <p class="sub">Enter the answers to every Step 1 question below.</p>
+  <div class="lockmsg">Locked until Step 1 completes.</div>
+  <div style="margin-top:10px">
+    <label for="answers">Answers to follow-up questions</label>
+    <textarea id="answers" placeholder="e.g. Kernig sign positive, no rash, vaccinated, no TB contacts"></textarea>
+  </div>
+  <button class="run" id="btn2" disabled>Run Step 2: Get investigation recommendations</button>
+  <div class="status" id="st2"></div>
+  <div class="grid" style="margin-top:14px">
+    <div>
+      <p class="ptitle">Recommended investigations <span>(perform before Step 3)</span></p>
+      <div class="panel" id="out2a"><span class="empty">Complete Step 1 first.</span></div>
+    </div>
+    <div>
+      <p class="ptitle">Working differential <span>(not a confirmed diagnosis)</span></p>
+      <div class="panel" id="out2b"><span class="empty">Awaiting Step 2.</span></div>
+    </div>
+  </div>
+  <p class="ptitle" style="margin-top:14px">Rationale for investigation selection</p>
+  <div class="panel" id="out2c"><span class="empty">Awaiting Step 2.</span></div>
+  <div class="handoff">
+    <strong>Clinician action required.</strong> Perform the investigations listed above.
+    Aletheia does not simulate or perform tests. Return with the real results.
+  </div>
+</section>
+
+<section class="card locked" id="card3">
+  <span class="badge">Step 3</span>
+  <h2>Enter investigation results, get clinical advisory</h2>
+  <p class="sub">Every output here is advisory. You retain full decision authority.</p>
+  <div class="lockmsg">Locked until Step 2 completes.</div>
+  <div style="margin-top:10px">
+    <label for="results">Investigation results</label>
+    <textarea id="results" placeholder="e.g. CSF cloudy, WBC 2000 cells/uL (90% neutrophils), protein high, glucose low. Malaria RDT negative."></textarea>
+  </div>
+  <button class="run" id="btn3" disabled>Run Step 3: Get clinical advisory</button>
+  <div class="status" id="st3"></div>
+  <div style="margin-top:14px">
+    <p class="ptitle">Clinical advisory</p>
+    <div class="panel" id="out3a"><span class="empty">Complete Steps 1 and 2 first.</span></div>
+  </div>
+</section>
+
+<footer>Aletheia . Soroti University, Uganda . ADTC 2026</footer>
+</div>
+
+<script>
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];
+  });
+}
+
+var EXAMPLES = [
+  ["fever, headache, neck stiffness, vomiting", 2, "adult", "unknown", "Meningitis"],
+  ["altered consciousness, seizures, fever, pallor", 2, "child", "female", "Cerebral malaria"],
+  ["cough, weight loss, night sweats, haemoptysis", 30, "adult", "male", "Pulmonary TB"],
+  ["seizures, severe headache, high blood pressure, oedema", 1, "adult", "female", "Eclampsia"],
+  ["heavy bleeding after delivery, pallor, tachycardia", 0, "adult", "female", "Postpartum haemorrhage"],
+  ["severe wasting, oedema, anorexia", 90, "child", "unknown", "Severe malnutrition"],
+  ["bite wound, local swelling, ptosis", 0, "adult", "male", "Snake envenomation"]
+];
+
+EXAMPLES.forEach(function(ex){
+  var b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.textContent = ex[4];
+  b.onclick = function(){
+    $("symptoms").value = ex[0]; $("duration").value = ex[1];
+    $("age").value = ex[2];      $("sex").value = ex[3];
+  };
+  $("chips").appendChild(b);
+});
+
+function pct(p){ var n = Number(p) || 0; return Math.round(n <= 1 ? n * 100 : n); }
+
+function first(o, keys){
+  for (var i = 0; i < keys.length; i++){
+    var v = o ? o[keys[i]] : null;
+    if (v != null && v.length) return v;
+  }
+  return null;
+}
+
+function listHTML(items){
+  if (!items || !items.length) return null;
+  return '<ol class="qs">' + items.map(function(i){ return "<li>" + esc(i) + "</li>"; }).join("") + "</ol>";
+}
+
+function diffTable(rows, withSev){
+  if (!rows || !rows.length) return null;
+  var h = "<table><tr><th>Condition</th><th>Probability</th>" +
+          (withSev ? "<th>Severity</th>" : "") + "</tr>";
+  rows.forEach(function(d){
+    var p = pct(d.probability);
+    h += "<tr><td>" + esc(d.condition) + "</td>" +
+         '<td style="white-space:nowrap">' + p + '% <div class="bar" style="width:' +
+         Math.max(3, p) + '%"></div></td>' +
+         (withSev ? '<td><span class="sev ' + esc(d.severity) + '">' + esc(d.severity) + "</span></td>" : "") +
+         "</tr>";
+  });
+  return h + "</table>";
+}
+
+function setPanel(el, html, emptyMsg){
+  el.innerHTML = html || ('<span class="empty">' + esc(emptyMsg) + "</span>");
+}
+
+function status(el, state, text){
+  if (state === "run") el.innerHTML = '<div class="spin"></div><span>' + esc(text) + "</span>";
+  else if (state === "err") el.innerHTML = '<span class="err">' + esc(text) + "</span>";
+  else el.innerHTML = text ? "<span>" + esc(text) + "</span>" : "";
+}
+
+function unlock(card, btn){
+  card.classList.remove("locked");
+  btn.disabled = false;
+}
+
+function call(stage, extra, statusEl, btn, onDone){
+  var symptoms = $("symptoms").value.trim();
+  if (!symptoms){ status(statusEl, "err", "Enter at least one symptom."); return; }
+
+  btn.disabled = true;
+  var t0 = Date.now();
+  var tick = setInterval(function(){
+    status(statusEl, "run", "Running on local CPU, " + Math.round((Date.now() - t0) / 1000) + "s elapsed");
+  }, 250);
+
+  fetch("/api/stage", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      stage: stage, symptoms: symptoms,
+      duration: Number($("duration").value || 1),
+      age: $("age").value, sex: $("sex").value, extra: extra
+    })
+  }).then(function(res){ return res.json(); }).then(function(j){
+    clearInterval(tick);
+    btn.disabled = false;
+    if (!j.ok){ status(statusEl, "err", j.error || "Request failed."); return; }
+    status(statusEl, "ok", "Completed in " + j.elapsed + "s");
+    onDone(j.data || {});
+  }).catch(function(){
+    clearInterval(tick);
+    btn.disabled = false;
+    status(statusEl, "err", "Could not reach Aletheia. Is the server still running?");
+  });
+}
+
+$("btn1").onclick = function(){
+  call("initial_with_followup", "", $("st1"), $("btn1"), function(d){
+    setPanel($("out1a"), listHTML(first(d, ["follow_up_questions","follow_up","questions"])),
+             "No follow-up questions were returned.");
+    setPanel($("out1b"), diffTable(first(d, ["tentative_differentials","ranked_differentials","differentials"]), true),
+             "No differential returned.");
+    var flags = first(d, ["red_flags"]);
+    setPanel($("out1c"), flags ? '<ul class="flags">' +
+             flags.map(function(f){ return "<li>" + esc(f) + "</li>"; }).join("") + "</ul>" : null,
+             "No red flags identified.");
+    var rat = first(d, ["clinical_rationale","reasoning"]);
+    setPanel($("out1d"), rat ? esc(rat) : null, "No rationale returned.");
+    unlock($("card2"), $("btn2"));
+  });
+};
+
+$("btn2").onclick = function(){
+  var a = $("answers").value.trim();
+  if (!a){ status($("st2"), "err", "Answer the follow-up questions first."); return; }
+  call("test_recommendation", a, $("st2"), $("btn2"), function(d){
+    setPanel($("out2a"), listHTML(first(d, ["recommended_tests","priority_tests","investigations"])),
+             "No investigations returned.");
+    setPanel($("out2b"), diffTable(first(d, ["working_differential","tentative_differentials","differentials"]), false),
+             "No working differential returned.");
+    var rat = first(d, ["rationale_for_tests","clinical_rationale","reasoning"]);
+    setPanel($("out2c"), rat ? esc(rat) : null, "No rationale returned.");
+    unlock($("card3"), $("btn3"));
+  });
+};
+
+$("btn3").onclick = function(){
+  var r = $("results").value.trim();
+  if (!r){ status($("st3"), "err", "Enter the investigation results first."); return; }
+  call("advisory_conclusion", r, $("st3"), $("btn3"), function(d){
+    var dx = first(d, ["likely_diagnosis","final_diagnosis","diagnosis"]);
+    var conf = d.diagnostic_confidence || "";
+    var opts = first(d, ["management_options","management","treatment"]);
+    var step = d.recommended_first_step || "";
+    var more = first(d, ["further_investigations_if_needed"]);
+    var note = d.clinical_advisory_note || "";
+    if (!dx && !opts && !step){
+      setPanel($("out3a"), null, "No advisory returned. Check the model output.");
+      return;
+    }
+    var h = "";
+    if (dx) h += '<p class="ptitle">Likely diagnosis</p><p>' + esc(dx) +
+                 (conf ? ' <span class="sev High">confidence: ' + esc(conf) + "</span>" : "") + "</p>";
+    if (opts) h += '<p class="ptitle">Management options for your consideration</p>' + listHTML(opts);
+    if (step) h += '<p class="ptitle">Suggested first step</p><p>' + esc(step) + "</p>";
+    if (more) h += '<p class="ptitle">Further investigations if needed</p>' + listHTML(more);
+    h += '<div class="advisory-note">' +
+         esc(note || "The treating clinician retains full authority over all management decisions.") +
+         "</div>";
+    setPanel($("out3a"), h, "");
+  });
+};
+</script>
+</body>
+</html>

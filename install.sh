@@ -35,9 +35,7 @@ echo "[ 2/5 ] Installing Python packages..."
 pip3 install --quiet --upgrade pip
 pip3 install --quiet \
     rich \
-    typer \
-    requests \
-    gradio
+    gdown
 
 # ── Build llama.cpp (CPU only) ────────────────────────────────
 echo "[ 3/5 ] Building llama.cpp inference engine..."
