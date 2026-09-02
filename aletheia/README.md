@@ -101,7 +101,7 @@ bash install.sh
 
 This will automatically:
 - Install all system dependencies (cmake, build-essential, python3-pip)
-- Install Python packages (rich, gdown)
+- Install Python packages (rich)
 - Clone and build llama.cpp for CPU-only inference
 - Write the inference configuration file
 

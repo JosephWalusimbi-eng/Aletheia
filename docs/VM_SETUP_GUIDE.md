@@ -138,25 +138,15 @@ cd Aletheia
 This gets all scripts, configs, and the full repo structure instantly.
 No need for shared folders or USB drives.
 
-### Step 2 — Download the model file from Google Drive
+### Step 2 — Download the model file
 
-The model file (`aletheia_q4km.gguf`, 1.80 GB) is too large for GitHub.
-Download it directly from Google Drive inside the VM.
+The model file (`aletheia_q4km.gguf`, 1.80 GB) is too large for GitHub, so it is
+hosted on Hugging Face. The download script fetches it and resumes automatically
+if the connection drops.
 
 ```bash
-# Install gdown
-pip3 install gdown
-
-# Download using the model file ID
-python3.11 -m gdown "1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO" \
-    -O ~/Aletheia/model/aletheia_q4km.gguf
-```
-
-If gdown gives a "permission denied" or quota error, use the fuzzy method:
-```bash
-python3.11 -m gdown --fuzzy \
-    "https://drive.google.com/file/d/1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO/view?usp=sharing" \
-    -O ~/Aletheia/model/aletheia_q4km.gguf
+cd ~/Aletheia
+bash download_model.sh
 ```
 
 **Verify the download:**
@@ -165,8 +155,10 @@ ls -lh ~/Aletheia/model/aletheia_q4km.gguf
 # Should show: ~1.8 GB
 ```
 
-> ℹ️ gdown may show `1.93 G` while Google Drive shows `1.8 GB` — this
-> is normal. They are the same file in different units (GiB vs GB).
+> The script checks the exact byte count and the GGUF magic bytes before
+> reporting success, so a truncated transfer is caught rather than silently
+> accepted. Re-run it to resume from where it stopped.
+
 
 ### Step 3 — Set up the Python 3.11 virtual environment
 
@@ -180,7 +172,7 @@ bash setup_venv.sh
 
 This single script:
 - Creates a Python 3.11 venv at `~/Aletheia/venv/`
-- Installs all Python packages inside the venv (rich, gdown)
+- Installs all Python packages inside the venv (rich)
 - Builds llama.cpp for CPU inference
 - Writes the inference config file
 - Adds llama.cpp binaries to your PATH permanently
@@ -224,7 +216,7 @@ If it still fails, bypass install.sh and set up manually:
 sudo apt-get install -y build-essential cmake git libgomp1
 
 # Step B — Python packages
-pip3 install rich gdown
+pip3 install rich
 
 # Step C — Clone and build llama.cpp
 git clone https://github.com/ggerganov/llama.cpp ~/llama.cpp --depth=1
@@ -482,7 +474,7 @@ curl -sS https://bootstrap.pypa.io/get-pip.py | sudo python3.11
 ```bash
 pip3 install --upgrade Pillow
 # Or if that fails:
-pip3 install --upgrade --force-reinstall rich gdown
+pip3 install --upgrade --force-reinstall rich
 ```
 
 ### "llama-cli not found"
@@ -498,8 +490,8 @@ export PATH="$HOME/llama.cpp/build/bin:$PATH"
 llama-bench --version
 ```
 
-### gdown shows 1.93G but Drive shows 1.8GB
-Normal — same file, different units (GiB vs GB). No problem.
+### The model shows as 1.93G in some tools and 1.8GB in others
+Normal, same file in different units (GB vs GiB). No problem.
 
 ### RAM exceeds 7 GB
 ```bash

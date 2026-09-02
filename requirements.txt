@@ -3,4 +3,3 @@
 # See: bash setup_venv.sh
 
 rich>=13.0.0
-gdown>=6.0.0
