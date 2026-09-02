@@ -316,7 +316,7 @@ RANKED DIFFERENTIAL DIAGNOSIS:
 ### Test 2 — Interactive chatbot (CLI)
 
 ```bash
-python3 chat/cli.py
+python3 cli.py
 ```
 
 Enter symptoms one by one, press blank line when done.

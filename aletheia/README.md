@@ -105,7 +105,7 @@ This will automatically:
 ### Step 3 — Download the model
 
 ```bash
-bash models/download_model.sh
+bash download_model.sh
 ```
 
 This downloads `aletheia_q4km.gguf` (~1.80 GB) — the primary deployment model.
@@ -190,7 +190,7 @@ To stop the web UI: press `Ctrl+C` in the terminal.
 A guided session-based chatbot in the terminal.
 
 ```bash
-python3 chat/cli.py
+python3 cli.py
 ```
 
 The chatbot will prompt you for:

@@ -146,16 +146,41 @@ You need **Python 3.11 exactly**. Ubuntu version notes:
 
 | Ubuntu version | Default Python | Action needed |
 |---|---|---|
-| 20.04 LTS | 3.8 | Install 3.11 via deadsnakes PPA (see below) |
-| 22.04 LTS | 3.10 | Install 3.11 via deadsnakes PPA (see below) |
-| 24.04 LTS | 3.12 | Install 3.11 via deadsnakes PPA (see below) |
+| 20.04 LTS | 3.8 | Install 3.11 via deadsnakes PPA (option A) |
+| 22.04 LTS | 3.10 | Install 3.11 via deadsnakes PPA (option A) |
+| 24.04 LTS | 3.12 | Install 3.11 via deadsnakes PPA (option A) |
+| 26.04 LTS | 3.14 | deadsnakes has no 3.11 build for 26.04 — use option B |
+
+**Option A — deadsnakes PPA** (20.04 / 22.04 / 24.04):
 
 ```bash
-# All Ubuntu versions — install Python 3.11 via deadsnakes
 sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt update
 sudo apt install -y python3.11 python3.11-venv python3.11-distutils
 ```
+
+**Option B — `uv`** (works on every Ubuntu version, including 26.04, and needs no `sudo`):
+
+deadsnakes only publishes packages for releases it has built for, so on 26.04 option A
+fails outright. `uv` fetches a self-contained CPython 3.11 into your home directory
+instead, which sidesteps both that and the `externally-managed-environment` (PEP 668)
+restriction that blocks system-wide `pip install` on recent Ubuntu.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"      # add to ~/.bashrc to make it permanent
+uv python install 3.11
+uv venv --python 3.11 venv
+uv pip install -r requirements.txt        # with venv/ as the active target
+uv pip install pip                        # see note below
+```
+
+This produces the same `venv/` that step 2.6 describes; activate it the same way.
+
+> Unlike `python3.11 -m venv`, `uv venv` does **not** put `pip` inside the environment.
+> Aletheia itself does not need it, but `benchmark/run_adtc_profiler.sh` calls `pip3` to
+> install the ADTC profiler, so install `pip` into the venv as shown or that script will
+> fall through to the system `pip3` and fail with `externally-managed-environment`.
 
 ### 2.2 Get the Aletheia code
 
@@ -175,10 +200,35 @@ cmake --build build --config Release -j$(nproc)
 
 This produces the binary at `~/llama.cpp/build/bin/llama-cli`.
 
+**Alternative — prebuilt binaries (no `cmake`, no `sudo`, no compile wait).** Upstream
+publishes a CPU build for Ubuntu x86-64 with every release, which is the quickest way
+onto a fresh machine:
+
+```bash
+mkdir -p ~/llama.cpp/build/bin
+curl -sSL "$(curl -sSL 'https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=1' \
+    | grep -o 'https[^"]*-bin-ubuntu-x64\.tar\.gz')" -o /tmp/llama.tgz
+tar -xzf /tmp/llama.tgz -C /tmp
+cp -a /tmp/llama-b*/* ~/llama.cpp/build/bin/
+```
+
 Verify it works:
 ```bash
 ~/llama.cpp/build/bin/llama-cli --version
 ```
+
+> **Note on `llama-cli` vs `llama-completion`.** Newer llama.cpp builds turned
+> `llama-cli` into a conversation-only front end: given `-p` it waits for interactive
+> turns instead of completing the prompt and exiting, so it will appear to hang and peg
+> every core. Those builds ship the one-shot completer as a separate `llama-completion`
+> binary. Aletheia detects this automatically — `inference/aletheia.py` prefers
+> `llama-completion` when it is present alongside the configured `llama_cli` and falls
+> back to `llama-cli` on older builds — so you can leave `llama_cli` pointing at
+> `llama-cli` in `config.json` either way.
+>
+> For the same reason Aletheia does **not** pass `--log-disable`: on current builds that
+> flag suppresses the generated tokens along with the logs, leaving stdout empty. The
+> logs go to stderr, which is captured separately, so stdout stays clean without it.
 
 ### 2.4 Place the model file
 

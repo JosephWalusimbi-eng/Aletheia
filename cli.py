@@ -16,8 +16,6 @@ Stages are sequential and enforced:
 import sys
 import json
 import re
-import subprocess
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -32,7 +30,7 @@ try:
 except ImportError:
     HAS_RICH = False
 
-from inference.aletheia import build_prompt, load_config
+from inference.aletheia import build_prompt, run_inference
 
 console = Console() if HAS_RICH else None
 
@@ -305,30 +303,12 @@ def collect_symptoms() -> tuple:
 # ── Inference wrapper ─────────────────────────────────────────
 def run_stage(reasoning_type: str, symptoms, duration, age_group, sex,
               extra: str = "") -> tuple[dict, float]:
-    cfg = load_config()
-    llama_bin = cfg["llama_cli"]
-    model_path = cfg["model_path"]
-
     prompt = build_prompt(symptoms, duration, age_group, sex, reasoning_type, extra=extra)
-    cmd = [
-        llama_bin, "-m", model_path,
-        "-p", prompt,
-        "-n", str(cfg.get("max_tokens", 512)),
-        "-c", str(cfg.get("context_size", 1024)),
-        "-t", str(cfg.get("threads", 4)),
-        "--temp", str(cfg.get("temperature", 0.1)),
-        "--no-display-prompt", "-ngl", "0", "--log-disable",
-    ]
 
     cprint("\n[dim]Running inference...[/dim]" if HAS_RICH else "\nRunning inference...")
-    t0 = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    elapsed = round(time.time() - t0, 1)
+    raw, elapsed = run_inference(prompt, timeout=600)
 
-    if result.returncode != 0:
-        raise RuntimeError(f"llama-cli failed:\n{result.stderr[-200:]}")
-
-    return parse_json(result.stdout.strip()), elapsed
+    return parse_json(raw), elapsed
 
 
 # ── Main clinical flow ────────────────────────────────────────

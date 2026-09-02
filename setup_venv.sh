@@ -91,12 +91,13 @@ fi
 export PATH="$HOME/llama.cpp/build/bin:$PATH"
 
 # ── Write config ──────────────────────────────────────────────
-USERNAME=$(whoami)
+# Paths are derived from $HOME and the repo location, so the config stays correct
+# no matter where the repo was cloned or what the account is called.
 mkdir -p "$REPO_DIR/inference"
 cat > "$REPO_DIR/inference/config.json" << CONFIGEOF
 {
-  "llama_cli": "/home/${USERNAME}/llama.cpp/build/bin/llama-cli",
-  "model_path": "/home/${USERNAME}/Aletheia/models/aletheia_q4km.gguf",
+  "llama_cli": "$HOME/llama.cpp/build/bin/llama-cli",
+  "model_path": "$REPO_DIR/models/aletheia_q4km.gguf",
   "context_size": 1024,
   "threads": $(nproc),
   "max_tokens": 512,
@@ -111,8 +112,7 @@ if [ ! -f "$MODEL" ]; then
     echo ""
     echo "  ⚠️  Model file not found — download it:"
     echo "  source venv/bin/activate"
-    echo "  python3.11 -m gdown \"1XZpNCU03C65kGFqJgUMpAWNhJ-Jt2rFO\" \\"
-    echo "      -O ~/Aletheia/models/aletheia_q4km.gguf"
+    echo "  bash download_model.sh"
 else
     SIZE=$(du -sh "$MODEL" | cut -f1)
     echo "  Model: $SIZE ✅"
@@ -125,11 +125,11 @@ echo "║  Setup complete ✅                                    ║"
 echo "╠══════════════════════════════════════════════════════╣"
 echo "║  IMPORTANT: Always activate the venv before use:     ║"
 echo "║                                                       ║"
-echo "║    source ~/Aletheia/venv/bin/activate               ║"
+echo "║    source venv/bin/activate                          ║"
 echo "║                                                       ║"
 echo "║  Then run:                                            ║"
-echo "║    python3 app.py          ← Web UI                  ║"
-echo "║    python3 chat/cli.py     ← Terminal chatbot        ║"
+echo "║    python3 aletheia/app.py ← Web UI                  ║"
+echo "║    python3 cli.py          ← Interactive terminal    ║"
 echo "║    python3 run.py --help   ← Single query            ║"
 echo "║    bash benchmark/run_adtc_profiler.sh               ║"
 echo "╚══════════════════════════════════════════════════════╝"

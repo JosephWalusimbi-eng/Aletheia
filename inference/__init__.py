@@ -1,1 +1,1 @@
-# Aletheia chat package
+# Aletheia inference package

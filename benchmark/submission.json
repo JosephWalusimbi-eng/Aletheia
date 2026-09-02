@@ -1,11 +1,11 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "profiler_version": "adtc-profiler 0.1.0",
   "submission": {
     "team_id": "Aletheia",
     "domain": "healthcare_medical",
     "language_scope": [
-      "English"
+      "en"
     ],
     "african_alpha_claim": true,
     "budget_laptop_claim": true,
@@ -15,24 +15,24 @@
       "github_handle": "JosephWalusimbi-eng"
     },
     "cross_disciplinary_pairing": {
-      "discipline": "clinical_medicine",
+      "discipline": "medicine",
       "load_bearing": true,
-      "description": "Precious Nasasara (School of Health Sciences, Soroti University) defined the 50-condition clinical scope, validated training data labels, and serves as clinical reviewer for all Aletheia outputs."
+      "description": "Aletheia is a three-stage offline clinical decision support system for district hospitals in sub-Saharan Africa. It guides clinicians through symptom assessment, targeted follow-up questioning, investigation recommendations, and a post-results management advisory — with explicit framing that the treating clinician retains all final decision authority."
     },
     "test_prompts": [
       {
-        "prompt_id": "meningitis_differential",
-        "prompt": "### System:\nYou are Aletheia, an offline-first clinical decision support AI designed for district hospitals in sub-Saharan Africa. Always respond in structured JSON format.\n\n### Instruction:\nAnalyze the patient presentation and provide a ranked differential diagnosis with probability estimates and severity ratings.\n\n### Input:\n{\"symptoms\": [\"fever\", \"headache\", \"neck stiffness\", \"vomiting\"], \"duration_days\": 2, \"patient_age_group\": \"adult\", \"sex\": \"unknown\"}\n\n### Response:\n"
+        "prompt_id": "tp_001",
+        "prompt": "### System:\nYou are Aletheia, an offline-first clinical decision support AI designed for district hospitals and health centres in sub-Saharan Africa. You support — not replace — the treating clinician. Always respond in structured JSON format.\n\n### Instruction:\nAnalyze this patient presentation. List the most likely differential diagnoses with probability estimates and severity. Then identify 3 to 5 targeted follow-up questions the clinician must answer to narrow the differential. Do NOT recommend diagnostic tests yet — tests come after the follow-up answers are collected. Output JSON with these exact keys: tentative_differentials (list of objects with keys condition, probability 0.0-1.0, severity one of Critical|High|Moderate|Low), follow_up_questions (list of strings), red_flags (list of strings — signs requiring immediate escalation), clinical_rationale (string).\n\n### Input:\n{\"symptoms\": [\"fever\", \"severe headache\", \"neck stiffness\", \"photophobia\", \"vomiting\"], \"duration_days\": 2, \"patient_age_group\": \"adult\", \"sex\": \"female\"}\n\n### Response:\n"
       },
       {
-        "prompt_id": "cerebral_malaria_severity",
-        "prompt": "### System:\nYou are Aletheia, an offline-first clinical decision support AI designed for district hospitals in sub-Saharan Africa. Always respond in structured JSON format.\n\n### Instruction:\nAssess the severity of this presentation and determine the appropriate level of care. Identify any immediate life threats and red flags.\n\n### Input:\n{\"symptoms\": [\"altered consciousness\", \"seizures\", \"fever\", \"pallor\"], \"duration_days\": 1, \"patient_age_group\": \"child\", \"sex\": \"female\"}\n\n### Response:\n"
+        "prompt_id": "tp_002",
+        "prompt": "### System:\nYou are Aletheia, an offline-first clinical decision support AI designed for district hospitals and health centres in sub-Saharan Africa. You support — not replace — the treating clinician. Always respond in structured JSON format.\n\n### Instruction:\nGiven the investigation results, provide clinical decision support to help the treating clinician decide on management. Your output is ADVISORY — the treating clinician makes every final management decision. Do not issue a treatment order. Present options and reasoning for the clinician to evaluate. Output JSON with these exact keys: likely_diagnosis (string), diagnostic_confidence (string: High|Moderate|Low), management_options (list of strings — options for the clinician to consider, not orders), recommended_first_step (string — a suggestion, not a directive), further_investigations_if_needed (list of strings), clinical_advisory_note (string — must explicitly state that the clinician retains full decision authority over patient management).\n\n### Input:\n{\"symptoms\": [\"cough\", \"weight loss\", \"night sweats\", \"haemoptysis\"], \"duration_days\": 30, \"patient_age_group\": \"adult\", \"sex\": \"male\", \"investigation_results\": \"Sputum AFB smear positive (2+) x2. Chest X-ray: right upper lobe cavitation with infiltrates. HIV RDT: positive. CD4 count 180 cells/uL. Malaria RDT: negative. Blood culture: no growth at 48h.\"}\n\n### Response:\n"
       }
     ],
     "model": {
-      "name": "aletheia_q4km",
+      "name": "Aletheia-Q4_K_M",
       "runtime": "llama.cpp (CPU only, -ngl 0)",
-      "quantization": "Q4_K_M",
+      "quantization": "GGUF Q4_K_M",
       "parameters_estimate": "3B",
       "packaging": "binary_bundle"
     }
@@ -40,34 +40,34 @@
   "environment": {
     "measured_on": "participant_laptop",
     "cpu_model": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
-    "ram_gb": 7.8,
+    "ram_gb": 9.7,
     "gpu": "none",
-    "os": "Ubuntu 22.04.5 LTS"
+    "os": "Ubuntu 26.04 LTS"
   },
   "throughput": {
-    "tokens_per_second_generation": 3.71,
-    "first_token_latency_ms": 32725.49,
+    "tokens_per_second_generation": 5.68,
+    "first_token_latency_ms": 29985.68,
     "prompt_tokens": 512,
     "generated_tokens": 128
   },
   "memory": {
-    "peak_rss_mb": 3273.07,
-    "steady_state_rss_mb": 3155.12,
-    "peak_vms_mb": 3757.47
+    "peak_rss_mb": 3281.26,
+    "steady_state_rss_mb": 3121.18,
+    "peak_vms_mb": 3771.29
   },
   "accuracy": [],
   "cpu_thermal": {
-    "cpu_percent_p99": 90.5,
+    "cpu_percent_p99": 51.0,
     "core_temp_c_peak": null,
     "throttled": false
   },
   "reproducibility": {
-    "git_commit_sha": "0941db6386e9",
+    "git_commit_sha": "baed3b2dd3d4",
     "docker_image_digest": "unknown",
     "random_seed": 42
   },
   "model_info": {
-    "params_count": null,
+    "params_count": 3085938688,
     "context_length": 32768,
     "architecture": "qwen2",
     "claimed_params_estimate": "3B",

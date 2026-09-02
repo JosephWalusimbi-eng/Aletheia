@@ -125,6 +125,35 @@ def build_prompt(
     )
 
 
+def resolve_runner(llama_cli: str) -> str:
+    """
+    Return the llama.cpp binary that performs one-shot (non-chat) completion.
+
+    Newer llama.cpp builds turned `llama-cli` into a conversation-only front end —
+    given `-p` it waits for interactive turns instead of completing the prompt and
+    exiting, which hangs Aletheia until the timeout. Those builds ship the one-shot
+    completer as a separate `llama-completion` binary, so prefer it when present and
+    fall back to the configured `llama-cli` on older builds.
+    """
+    configured = Path(llama_cli)
+    completion = configured.with_name("llama-completion")
+    return str(completion) if completion.exists() else str(configured)
+
+
+# Trailing markers llama.cpp appends to stdout after generation finishes.
+_END_MARKERS = ("> EOF by user", "[end of text]")
+
+
+def _clean_output(stdout: str) -> str:
+    """Strip llama.cpp's end-of-generation markers from captured stdout."""
+    text = stdout
+    for marker in _END_MARKERS:
+        idx = text.rfind(marker)
+        if idx != -1:
+            text = text[:idx]
+    return text.strip()
+
+
 def run_inference(prompt: str, timeout: int = 600) -> tuple[str, float]:
     """Run inference via llama.cpp CLI. Returns (response_text, elapsed_seconds)."""
     cfg = load_config()
@@ -140,8 +169,11 @@ def run_inference(prompt: str, timeout: int = 600) -> tuple[str, float]:
             f"Model not found at {model_path}\nRun model download first."
         )
 
+    # `--log-disable` is deliberately not passed: on current llama.cpp it silences the
+    # generated tokens along with the logs, leaving stdout empty. Logs go to stderr,
+    # which is captured on a separate pipe, so stdout stays clean without it.
     cmd = [
-        llama_bin,
+        resolve_runner(llama_bin),
         "-m", model_path,
         "-p", prompt,
         "-n", str(cfg.get("max_tokens", 512)),
@@ -150,11 +182,12 @@ def run_inference(prompt: str, timeout: int = 600) -> tuple[str, float]:
         "--temp", str(cfg.get("temperature", 0.1)),
         "--no-display-prompt",
         "-ngl", "0",
-        "--log-disable",
     ]
 
     t0 = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL
+    )
     elapsed = round(time.time() - t0, 1)
 
     if result.returncode != 0:
@@ -163,7 +196,7 @@ def run_inference(prompt: str, timeout: int = 600) -> tuple[str, float]:
             f"STDERR: {result.stderr[-500:]}"
         )
 
-    return result.stdout.strip(), elapsed
+    return _clean_output(result.stdout), elapsed
 
 
 def parse_response(raw: str) -> dict:

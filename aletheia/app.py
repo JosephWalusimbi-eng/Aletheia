@@ -15,11 +15,9 @@ Stage 3 button is disabled until Stage 2 succeeds.
 import sys
 import json
 import re
-import subprocess
-import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 try:
     import gradio as gr
@@ -28,7 +26,7 @@ except ImportError:
     sp.run([sys.executable, "-m", "pip", "install", "gradio", "-q"], check=True)
     import gradio as gr
 
-from inference.aletheia import build_prompt, load_config
+from inference.aletheia import build_prompt, run_inference
 
 CSS = """
 .aletheia-header {
@@ -60,29 +58,8 @@ CSS = """
 
 # ── Run inference ─────────────────────────────────────────────
 def run_llama(prompt: str, timeout: int = 600) -> tuple[str, float]:
-    cfg = load_config()
-    llama_bin = cfg["llama_cli"]
-    model_path = cfg["model_path"]
-
-    if not Path(llama_bin).exists():
-        raise FileNotFoundError(f"llama-cli not found: {llama_bin}\nRun: bash setup_venv.sh")
-    if not Path(model_path).exists():
-        raise FileNotFoundError(f"Model not found: {model_path}\nRun model download first.")
-
-    cmd = [
-        llama_bin, "-m", model_path, "-p", prompt,
-        "-n", str(cfg.get("max_tokens", 512)),
-        "-c", str(cfg.get("context_size", 1024)),
-        "-t", str(cfg.get("threads", 4)),
-        "--temp", str(cfg.get("temperature", 0.1)),
-        "--no-display-prompt", "-ngl", "0", "--log-disable",
-    ]
-    t0 = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    elapsed = round(time.time() - t0, 1)
-    if result.returncode != 0:
-        raise RuntimeError(f"llama-cli error:\n{result.stderr[-300:]}")
-    return result.stdout.strip(), elapsed
+    """Delegate to the shared wrapper so the UI and the CLIs invoke llama.cpp identically."""
+    return run_inference(prompt, timeout=timeout)
 
 
 def parse_json(raw: str) -> dict:
@@ -305,11 +282,9 @@ def stage3_advise(symptoms_text, duration, age_group, sex, test_results):
 
 # ── Build UI ──────────────────────────────────────────────────
 def build_ui():
-    with gr.Blocks(
-        css=CSS,
-        title="Aletheia — Clinical Decision Support",
-        theme=gr.themes.Soft(primary_hue="cyan", secondary_hue="slate"),
-    ) as demo:
+    # Gradio 6 moved `css` and `theme` from the Blocks constructor to launch();
+    # passing them here is ignored, which silently drops the styling.
+    with gr.Blocks(title="Aletheia — Clinical Decision Support") as demo:
 
         gr.HTML("""
         <div class="aletheia-header">
@@ -497,6 +472,8 @@ if __name__ == "__main__":
     demo = build_ui()
     demo.queue(default_concurrency_limit=1)
     demo.launch(
+        css=CSS,
+        theme=gr.themes.Soft(primary_hue="cyan", secondary_hue="slate"),
         server_name="0.0.0.0",
         server_port=7860,
         share=False,

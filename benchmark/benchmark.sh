@@ -7,9 +7,27 @@
 set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODEL="$REPO_DIR/models/aletheia_q4km.gguf"
-LLAMA_BIN="$HOME/llama.cpp/build/bin/llama-cli"
 RESULTS_FILE="$REPO_DIR/benchmark/results.json"
+
+# The model normally lives in the repo, but inference/config.json is the per-machine
+# source of truth (it may point at a copy kept outside the repo). Prefer the repo copy,
+# fall back to whatever the config declares.
+MODEL="$REPO_DIR/models/aletheia_q4km.gguf"
+CONFIG="$REPO_DIR/inference/config.json"
+if [ ! -f "$MODEL" ] && [ -f "$CONFIG" ]; then
+    CONFIGURED=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('model_path',''))" "$CONFIG" 2>/dev/null || true)
+    [ -n "$CONFIGURED" ] && [ -f "$CONFIGURED" ] && MODEL="$CONFIGURED"
+fi
+
+# Newer llama.cpp builds turned llama-cli into a conversation-only front end that
+# waits for interactive turns instead of completing the prompt and exiting, and ship
+# the one-shot completer as llama-completion. Prefer it; fall back on older builds.
+LLAMA_BIN_DIR="$HOME/llama.cpp/build/bin"
+if [ -f "$LLAMA_BIN_DIR/llama-completion" ]; then
+    LLAMA_BIN="$LLAMA_BIN_DIR/llama-completion"
+else
+    LLAMA_BIN="$LLAMA_BIN_DIR/llama-cli"
+fi
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
@@ -19,7 +37,7 @@ echo "╚═══════════════════════�
 # ── Checks ────────────────────────────────────────────────────
 if [ ! -f "$MODEL" ]; then
     echo "❌  Model not found: $MODEL"
-    echo "    Run: bash models/download_model.sh"
+    echo "    Run: bash download_model.sh"
     exit 1
 fi
 
@@ -58,6 +76,7 @@ declare -a LABELS=(
 N_PROMPTS=${#PROMPTS[@]}
 TOTAL_ELAPSED=0
 TOTAL_TOKENS=0
+TOTAL_EVAL_MS=0
 
 echo "BENCHMARK RUNS ($N_PROMPTS prompts):"
 echo "──────────────────────────────────────────────────────"
@@ -71,7 +90,9 @@ for i in "${!PROMPTS[@]}"; do
     # Measure RAM before
     RAM_BEFORE=$(free -m | grep Mem | awk '{print $3}')
 
-    # Run inference
+    # Run inference. llama.cpp writes its own timing report to stderr — keep it, it is
+    # the only accurate source of generated-token counts and generation throughput.
+    STDERR_FILE=$(mktemp)
     START=$(date +%s%N)
     OUTPUT=$("$LLAMA_BIN" \
         -m "$MODEL" \
@@ -82,8 +103,7 @@ for i in "${!PROMPTS[@]}"; do
         --temp 0.1 \
         --no-display-prompt \
         -ngl 0 \
-        --log-disable \
-        2>/dev/null)
+        2>"$STDERR_FILE")
     END=$(date +%s%N)
 
     # Measure RAM after
@@ -93,12 +113,25 @@ for i in "${!PROMPTS[@]}"; do
     ELAPSED_MS=$(( (END - START) / 1000000 ))
     ELAPSED_S=$(echo "scale=2; $ELAPSED_MS / 1000" | bc)
 
-    # Token count (approximate)
-    TOKEN_COUNT=$(echo "$OUTPUT" | wc -w)
-    TOTAL_TOKENS=$((TOTAL_TOKENS + TOKEN_COUNT))
-    TOTAL_ELAPSED=$((TOTAL_ELAPSED + ELAPSED_MS))
+    # Real generated-token count and generation rate, taken from llama.cpp's own
+    # "eval time" line (the prompt-eval line is a different, much faster figure).
+    # Counting words instead understates throughput by roughly 4x.
+    EVAL_LINE=$(grep " eval time =" "$STDERR_FILE" | grep -v "prompt eval time" | tail -1)
+    TOKEN_COUNT=$(echo "$EVAL_LINE" | sed -n 's|.* eval time =[^/]*/ *\([0-9]*\) runs.*|\1|p')
+    EVAL_MS=$(echo "$EVAL_LINE" | sed -n 's|.* eval time = *\([0-9]*\)\.[0-9]* ms.*|\1|p')
+    TPS=$(echo "$EVAL_LINE" | sed -n 's|.*, *\([0-9.]*\) tokens per second.*|\1|p')
+    rm -f "$STDERR_FILE"
 
-    TPS=$(echo "scale=1; $TOKEN_COUNT / ($ELAPSED_MS / 1000)" | bc 2>/dev/null || echo "?")
+    # Fall back to the wall-clock word estimate if llama.cpp changed its report format.
+    if [ -z "$TOKEN_COUNT" ]; then
+        TOKEN_COUNT=$(echo "$OUTPUT" | wc -w)
+        EVAL_MS=$ELAPSED_MS
+        TPS=$(echo "scale=1; $TOKEN_COUNT / ($ELAPSED_MS / 1000)" | bc 2>/dev/null || echo "?")
+    fi
+
+    TOTAL_TOKENS=$((TOTAL_TOKENS + TOKEN_COUNT))
+    TOTAL_EVAL_MS=$((TOTAL_EVAL_MS + EVAL_MS))
+    TOTAL_ELAPSED=$((TOTAL_ELAPSED + ELAPSED_MS))
 
     PASS="✅ PASS"
     if [ "$RAM_USED" -gt "$ADTC_CEILING_MB" ]; then
@@ -112,7 +145,7 @@ echo "────────────────────────�
 
 # ── Summary ───────────────────────────────────────────────────
 AVG_ELAPSED_S=$(echo "scale=2; $TOTAL_ELAPSED / $N_PROMPTS / 1000" | bc)
-AVG_TPS=$(echo "scale=1; $TOTAL_TOKENS / ($TOTAL_ELAPSED / 1000)" | bc 2>/dev/null || echo "?")
+AVG_TPS=$(echo "scale=1; $TOTAL_TOKENS / ($TOTAL_EVAL_MS / 1000)" | bc 2>/dev/null || echo "?")
 MODEL_SIZE_MB=$(du -m "$MODEL" | cut -f1)
 EST_RAM_MB=$((MODEL_SIZE_MB + 900 + 400 + 300 + 200))
 
@@ -135,7 +168,7 @@ fi
 echo ""
 echo "  Internet required  : None"
 echo "  GPU required       : None (CPU only)"
-echo "  OS tested          : Ubuntu 22.04 LTS"
+echo "  OS tested          : $(lsb_release -d 2>/dev/null | cut -f2 || uname -s)"
 echo ""
 
 # ── Save results JSON ─────────────────────────────────────────

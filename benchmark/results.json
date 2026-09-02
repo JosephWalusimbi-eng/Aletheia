@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-09-02T06:28:37Z",
+  "model": "aletheia_q4km.gguf",
+  "system": {
+    "cpu": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+    "cores": 8,
+    "ram_total_mb": 9884,
+    "os": "Ubuntu 26.04 LTS"
+  },
+  "performance": {
+    "avg_latency_seconds": 22.80,
+    "avg_tokens_per_second": "6.6",
+    "n_prompts_tested": 3
+  },
+  "adtc_compliance": {
+    "model_size_mb": 1841,
+    "estimated_peak_ram_mb": 3641,
+    "ceiling_mb": 7168,
+    "margin_mb": 3527,
+    "internet_required": false,
+    "gpu_required": false,
+    "pass": true
+  }
+}

@@ -79,7 +79,7 @@ echo "[ 5/5 ] Checking model..."
 if [ ! -f "$MODEL_DIR/aletheia_q4km.gguf" ]; then
     echo ""
     echo "    ⚠️  Model file not found."
-    echo "    Run:  bash models/download_model.sh"
+    echo "    Run:  bash download_model.sh"
     echo "    Or manually copy aletheia_q4km.gguf to: $MODEL_DIR/"
 else
     SIZE=$(du -sh "$MODEL_DIR/aletheia_q4km.gguf" | cut -f1)
@@ -91,7 +91,7 @@ echo ""
 echo "╔══════════════════════════════════════════════════════╗"
 echo "║  Installation complete ✅                            ║"
 echo "╠══════════════════════════════════════════════════════╣"
-echo "║  Start chatbot:  python3 chat/cli.py                 ║"
+echo "║  Start terminal: python3 cli.py                      ║"
 echo "║  Single query:   python3 run.py --help               ║"
 echo "║  Benchmark:      bash benchmark/benchmark.sh         ║"
 echo "╚══════════════════════════════════════════════════════╝"

@@ -32,6 +32,6 @@
     "packaging": "binary_bundle"
   },
   "_runtime": {
-    "model_path": "model/aletheia_q4km.gguf"
+    "model_path": "models/aletheia_q4km.gguf"
   }
 }

@@ -33,7 +33,7 @@ flow and should stay intact even if Scene 6 gets trimmed.
 - [ ] VM/laptop fully booted, no other apps running (avoid lag/notifications on screen)
 - [ ] Close all unrelated browser tabs and desktop icons
 - [ ] Gradio app (`app.py`) NOT yet started — you'll start it on camera
-- [ ] Have `chat/cli.py` or `run.py` ready in a terminal, NOT yet run
+- [ ] Have `cli.py` or `run.py` ready in a terminal, NOT yet run
 - [ ] Wi-Fi currently ON (you'll disconnect it on camera as proof)
 - [ ] Pick ONE test case in advance and know it cold — recommend:
       **"fever, headache, neck stiffness, vomiting" (bacterial meningitis)**
@@ -227,7 +227,7 @@ name + team/university
 ## Optional: if you have extra time/energy
 
 A 10-15 second B-roll style addition showing the CLI version
-(`python3 chat/cli.py`) running the same case in parallel/split-screen
+(`python3 cli.py`) running the same case in parallel/split-screen
 can be a nice technical credibility touch for judges who want to see
 "under the hood" — but only add this if it doesn't push you past 3:00.
 It is NOT required; the web UI demo alone fully satisfies the brief.

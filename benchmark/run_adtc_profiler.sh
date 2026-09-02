@@ -52,7 +52,7 @@ echo "  llama-bench found ✅"
 MODEL="$REPO_DIR/models/aletheia_q4km.gguf"
 if [ ! -f "$MODEL" ]; then
     echo "  ❌  Model not found: $MODEL"
-    echo "  Run: bash models/download_model.sh"
+    echo "  Run: bash download_model.sh"
     exit 1
 fi
 echo "  Model: $(du -sh $MODEL | cut -f1) ✅"
