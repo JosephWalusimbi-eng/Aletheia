@@ -1,7 +1,16 @@
-# Aletheia — VM Setup, Testing & ADTC Profiler Guide
+# Aletheia — Environment Setup, Testing & ADTC Profiler Guide
 
-Complete step-by-step instructions from creating the VM to running
-the official ADTC profiler and getting your submission score.
+Complete step-by-step instructions from a bare machine to running the
+official ADTC profiler and getting your submission score.
+
+**Two routes are supported. Pick one:**
+
+- **A virtual machine** (VirtualBox or VMware) — PART 1, then PART 2 onward.
+  Use this if you are on macOS or Linux, or want an environment isolated
+  from the host.
+- **WSL2 on Windows** — PART 1-ALT, then PART 2 onward with the noted
+  substitutions. No VM to create and no disk to resize later. This is the
+  environment the benchmark figures in `REPORT.md` were measured in.
 
 ---
 
@@ -70,6 +79,213 @@ https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso
 | Processors | 4 |
 | Hard disk | 60 GB |
 | 3D graphics | OFF |
+
+---
+
+## PART 1-ALT — WSL2 ON WINDOWS (no VM needed)
+
+If you are on Windows, WSL2 is an alternative to the VM route. **Skip
+PART 1 entirely** — there is no VM to create, no VDI to size, and no disk
+to extend later.
+
+This is the environment the benchmark figures in `REPORT.md` were measured
+in: `Ubuntu 26.04 LTS (WSL2)`, kernel 6.6.87.2, on an Intel Core i5-8350U.
+If you are reproducing those numbers, read the memory section below before
+you run anything — the defaults will not reproduce them.
+
+### Step 1 — Install WSL2 and Ubuntu
+
+In **PowerShell as Administrator**:
+
+```powershell
+wsl --install -d Ubuntu
+```
+
+Reboot when asked, then set a UNIX username and password at first launch.
+Confirm you are on version 2, not 1:
+
+```powershell
+wsl -l -v
+```
+
+`VERSION` must read `2`. If it reads `1`, convert it:
+
+```powershell
+wsl --set-version Ubuntu 2
+```
+
+### Step 2 — Constrain memory and CPU to the target machine
+
+**Do this before measuring anything.** By default WSL2 claims a large
+share of host RAM and adds several GB of swap. On the development machine
+that is 9.65 GiB of memory and 3 GiB of swap — so a peak-RSS figure taken
+under the defaults is not a measurement of an 8 GB laptop, and an overrun
+of the 7,168 MB ADTC ceiling would be quietly absorbed by swap instead of
+failing.
+
+Create `C:\Users\<you>\.wslconfig` (Notepad is fine):
+
+```ini
+[wsl2]
+memory=8GB
+processors=4
+swap=0
+```
+
+Then apply it from PowerShell:
+
+```powershell
+wsl --shutdown
+```
+
+`swap=0` matters as much as `memory`: it makes exceeding the ceiling fail
+loudly rather than page silently. `processors=4` matches the physical core
+count of the target CPU — without it `nproc` reports 8 on this 4-core
+part, which is exactly the hyperthreading trap that costs 40% of
+generation throughput (see `REPORT.md`, *Runtime tuning*). Verify inside
+Ubuntu:
+
+```bash
+nproc                                   # want 4
+free -h | awk '/Swap/ {print $2}'       # want 0B
+awk '/MemTotal/ {printf "%.2f GiB\n", $2/1048576}' /proc/meminfo
+```
+
+### Step 3 — Update, and skip the Python 3.11 dance
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+**PART 2 Step 2 does not apply here.** Ubuntu 26.04 ships Python 3.14, so
+there is no deadsnakes PPA to add and no `python3.11-*` packages to chase.
+Check what you have:
+
+```bash
+python3 --version
+```
+
+Anything from 3.11 upward is fine. Aletheia declares exactly one Python
+dependency (`rich`, used only by the terminal CLI); the web interface needs
+none at all.
+
+### Step 4 — Put the model and llama.cpp on the Linux filesystem
+
+This is the one WSL-specific decision that affects performance.
+
+Files under `/mnt/c`, `/mnt/d` and so on are reached through a translation
+layer, and reading a 1.93 GB model through it on every run is markedly
+slower than reading it from the Linux filesystem. Keep the **model
+weights and the llama.cpp build under your Linux home**:
+
+```bash
+ls ~/aletheia-models/aletheia_q4km.gguf
+ls ~/llama.cpp/build/bin/llama-completion
+```
+
+The repository itself may live on the Windows side — `/mnt/d/Aletheia-Ug`
+is what this project uses, so the code can be edited in Windows and run in
+Ubuntu. Only the large, repeatedly-read artefacts need to be native.
+
+Then follow **PART 3** as written, with one substitution: wherever it
+clones to `~/Aletheia`, you may instead `cd /mnt/d/Aletheia-Ug` if the
+repository is already checked out on the Windows side.
+
+### Step 5 — Fix line endings if scripts fail to run
+
+The repository sets `* text=auto` in `.gitattributes` and Git for Windows
+defaults to `core.autocrlf=true`, so a checkout made on the Windows side can
+carry CRLF line endings. It usually does not, but when it does a shell script
+fails in bash with a confusing error:
+
+```
+bash: ./install.sh: /bin/bash^M: bad interpreter: No such file or directory
+```
+
+Fix the affected script in place:
+
+```bash
+sed -i 's/\r$//' install.sh setup_venv.sh download_model.sh start_aletheia.sh
+```
+
+This only bites when the repository lives under `/mnt/`. A clone made from
+inside WSL is unaffected.
+
+### Step 6 — Reach the web UI from the Windows browser
+
+Start the server in Ubuntu as PART 4 Test 3 describes:
+
+```bash
+python3 aletheia/server.py
+```
+
+It binds `127.0.0.1:7860` inside WSL. WSL2 forwards localhost, so open
+**http://localhost:7860** in the ordinary Windows browser — Chrome, Edge,
+whatever you use. No port forwarding to configure.
+
+If localhost forwarding is not working on your build, find the WSL address
+and use that instead:
+
+```bash
+hostname -I | awk '{print $1}'          # e.g. 172.28.114.3
+ALETHEIA_HOST=0.0.0.0 python3 aletheia/server.py
+```
+
+Then browse to `http://<that address>:7860`. Note that binding `0.0.0.0`
+exposes the console beyond loopback; prefer the localhost route.
+
+### Step 7 — Verify offline operation
+
+The equivalent of PART 4 Test 5. WSL routes its traffic through the
+Windows host, so pulling the host's network connection is the honest test:
+disable the Windows Wi-Fi or Ethernet adapter, then run a full three-stage
+consultation. Everything must work unchanged.
+
+To confirm from inside Ubuntu that nothing is reachable:
+
+```bash
+curl -sS --max-time 5 https://huggingface.co > /dev/null && echo "ONLINE" || echo "offline"
+```
+
+Aletheia opens no outbound socket at any point after installation, so this
+is a check on your test conditions rather than on the software.
+
+### What differs from the VM route, in short
+
+| Guide section | On WSL2 |
+|---|---|
+| PART 1 — create the VM | Skip entirely |
+| PART 2 Step 2 — Python 3.11 via deadsnakes | Skip; Ubuntu 26.04 ships 3.14 |
+| PART 3 — install Aletheia | As written; keep model and llama.cpp under `~` |
+| PART 4 Test 3 — web UI | Browse from Windows to `http://localhost:7860` |
+| PART 4 Test 4 — RAM check | Only meaningful after Step 2 above |
+| PART 4 Test 5 — offline | Disable the *Windows* adapter |
+| PART 5 — ADTC profiler | As written |
+| Troubleshooting — extend the VM disk | Not applicable |
+
+### WSL-specific troubleshooting
+
+**`apt` or `curl` fails with a certificate or date error after the laptop
+sleeps.** WSL's clock drifts away from the host across suspend. Resync:
+
+```bash
+sudo hwclock -s
+```
+
+**Everything is slow, especially the llama.cpp build.** You are almost
+certainly working under `/mnt/`. Build in `~` and keep only the source
+tree on the Windows side.
+
+**`wsl --shutdown` did not apply my `.wslconfig`.** The file must be at
+`C:\Users\<you>\.wslconfig` — not in the distro, and not in the repository
+— and Notepad may have saved it as `.wslconfig.txt`. Check with
+`cmd.exe /c dir %UserProfile%\.wslconfig`.
+
+**Peak RSS looks far below the ceiling and you do not trust it.** Confirm
+swap is actually off (`free -h`) and that memory is capped
+(`/proc/meminfo`). With 3 GB of swap available, a process that exceeds the
+budget will page rather than fail, and the number you record will be
+meaningless.
 
 ---
 
