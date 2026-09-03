@@ -71,7 +71,7 @@ sub-Saharan Africa.
 |--------|------|-----|--------------|----------|
 | F16 | 6.18 GB | ~8 GB | None | Exceeds budget |
 | Q8_0 | 3.2 GB | ~5 GB | <1% | Acceptable |
-| **Q4_K_M** | **1.80 GB** | **~3.6 GB** | **~2%** | **✅ Selected** |
+| **Q4_K_M** | **1.93 GB** | **~3.6 GB** | **~2%** | **✅ Selected** |
 | Q2_K | 1.19 GB | ~3.0 GB | ~8% | Fallback |
 
 Q4_K_M provides approximately 98% of F16 quality at 29% of the file
@@ -164,7 +164,7 @@ assessment, treatment hint, and red flag identification.
 
 | Metric | Value | ADTC Limit | Status |
 |--------|-------|------------|--------|
-| Model size (Q4_K_M) | **1.80 GB** | — | — |
+| Model size (Q4_K_M) | **1.93 GB** | — | — |
 | Model size (Q2_K fallback) | 1.19 GB | — | — |
 | Peak RAM (Q4_K_M) | **~3,630 MB** | 7,168 MB | ✅ PASS |
 | Peak RAM (Q2_K fallback) | ~2,990 MB | 7,168 MB | ✅ PASS |

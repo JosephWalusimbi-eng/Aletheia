@@ -100,3 +100,16 @@ aletheia paper/
 # Saved cases live beside the model weights on a deployed machine; this is
 # the fallback location when the model path is unavailable.
 aletheia_cases.json
+
+# ── Research paper ─────────────────────────────────────────────
+# The IEEE paper, every variant of it, and everything that feeds it stay
+# off GitHub entirely. They live on local disk only.
+#
+# NOTE: docs/Aletheia_IEEE_Paper.tex was tracked before this rule existed.
+# A .gitignore entry does not untrack a tracked file, so it also needs
+#     git rm --cached docs/Aletheia_IEEE_Paper.tex
+# once. Its content remains in earlier commits either way; removing it from
+# history requires a rewrite (git-filter-repo) and a force push.
+*.tex
+*.pdf
+docs/swap_condensed.py

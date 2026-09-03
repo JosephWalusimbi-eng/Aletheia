@@ -40,7 +40,7 @@ Download VirtualBox from https://www.virtualbox.org
 > If you already created the VM on another drive, use the resize process
 > in the Troubleshooting section to move it.
 
-> ⚠️ **Start with 60 GB** — not 25 GB. The model file (1.80 GB) +
+> ⚠️ **Start with 60 GB** — not 25 GB. The model file (1.93 GB) +
 > llama.cpp build (~500 MB) + Ubuntu base (~10 GB) + Python packages
 > fills a 25 GB disk completely, causing the VM to freeze and the
 > terminal to stop opening.
@@ -140,7 +140,7 @@ No need for shared folders or USB drives.
 
 ### Step 2 — Download the model file
 
-The model file (`aletheia_q4km.gguf`, 1.80 GB) is too large for GitHub, so it is
+The model file (`aletheia_q4km.gguf`, 1.93 GB) is too large for GitHub, so it is
 hosted on Hugging Face. The download script fetches it and resumes automatically
 if the connection drops.
 

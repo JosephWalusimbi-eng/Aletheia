@@ -151,7 +151,7 @@ This combination was designed to balance Africa-specific clinical relevance with
 
 ### Deployment
 
-The merged model was converted to **GGUF Q4_K_M format**, producing a deployment model of approximately **1.80 GB**.
+The merged model was converted to **GGUF Q4_K_M format**, producing a deployment model of **1.93 GB** (1,929,902,592 bytes; 1.80 GiB, which some tools display as "1.8G").
 
 The conversion pipeline used `llama.cpp` and followed a two-step process:
 
@@ -259,7 +259,7 @@ The model weights were initially hosted on Google Drive. However, Google Drive d
 
 During testing, a large model download stalled twice and had to be manually terminated and restarted.
 
-For a 1.8 GB model file being downloaded over an intermittent connection, this was impractical.
+For a 1.93 GB model file being downloaded over an intermittent connection, this was impractical.
 
 The weights were therefore moved to Hugging Face, which provides access over HTTPS and supports range requests. This allows interrupted downloads to resume using commands such as `curl -C -`, rather than requiring the entire file to be downloaded again.
 
@@ -314,9 +314,9 @@ In other words, the correct diagnosis appeared among Aletheia's three highest-ra
 
 These are internally generated held-out results, and the evaluation set is drawn from the same 50-condition distribution as the training data. The figure should therefore be read as evidence of consistent in-distribution ranking, rather than as a measure of performance on unseen real-world presentations, which remains to be established through external clinical validation.
 
-### 6.2 1.80 GB Deployment Size
+### 6.2 1.93 GB Deployment Size
 
-The three-billion-parameter model was compressed to approximately **1.80 GB** without a meaningful loss in measured performance.
+The three-billion-parameter model was compressed to **1.93 GB** without a meaningful loss in measured performance.
 
 The resulting model is small enough to fit on a USB drive, making physical distribution and offline deployment practical.
 

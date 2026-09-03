@@ -208,7 +208,7 @@ All measurements produced by the ADTC profiler (`adtc-profiler 0.1.0`) running i
 | OS | Ubuntu 26.04 LTS (WSL2) |
 | Inference runtime | llama.cpp b10733 (CPU only, `-ngl 0`) |
 | Quantization | GGUF Q4_K_M |
-| Model file size | 1.80 GB |
+| Model file size | 1.93 GB (1.80 GiB) |
 | Prompt tokens (profiler run) | 512 |
 | Generated tokens (profiler run) | 128 |
 | Peak RSS | 3,281 MB |

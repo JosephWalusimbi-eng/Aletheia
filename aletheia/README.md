@@ -33,7 +33,7 @@ Aletheia runs the entire clinical reasoning pipeline **on-device**:
 
 - ✅ **No internet required** — ever, at inference time
 - ✅ **No GPU required** — runs on CPU only
-- ✅ **1.80 GB model file** — fits on a USB drive
+- ✅ **1.93 GB model file** — fits on a USB drive
 - ✅ **3,281 MB peak RAM** — 3,887 MB below the 7,168 MB ADTC ceiling
 - ✅ **Web UI + CLI** — browser interface or terminal, launched from a desktop icon
 - ✅ **50 clinical conditions** weighted for African disease epidemiology
@@ -113,7 +113,7 @@ This will automatically:
 bash download_model.sh
 ```
 
-This downloads `aletheia_q4km.gguf` (~1.80 GB) — the primary deployment model.
+This downloads `aletheia_q4km.gguf` (~1.93 GB) — the primary deployment model.
 
 > If automatic download fails, see
 > [SETUP_AND_TESTING.md](../SETUP_AND_TESTING.md) for manual download instructions.
@@ -528,7 +528,7 @@ Aletheia/
 | Training hardware | NVIDIA A100-SXM4-80GB |
 | Training time | 1.92 hours |
 | Deployment format | GGUF Q4_K_M |
-| Model file size | 1.80 GB |
+| Model file size | 1.93 GB |
 | Inference engine | llama.cpp (CPU only, no GPU) |
 
 ---
