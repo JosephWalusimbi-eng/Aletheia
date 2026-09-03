@@ -94,3 +94,6 @@ docs/demo_script_2min.md
 *.mp3
 *.m4a
 recordings/
+
+*.zip
+aletheia paper/
