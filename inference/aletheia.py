@@ -388,16 +388,86 @@ def runtime_info() -> dict:
     }
 
 
-def parse_response(raw: str) -> dict:
-    """Extract and parse JSON from model output."""
+# A 3B model gets the clinical content right far more reliably than it gets the
+# key names right — most often it pluralises `working_differential`, and the
+# Stage 2 panel then reports no differential on a response that contained one.
+# The drift is mapped back here, at the one point every caller parses through,
+# so the UI, cli.py and run.py do not each need to carry their own alias list.
+_KEY_ALIASES = {
+    "initial_with_followup": {
+        "tentative_differential": "tentative_differentials",
+        "ranked_differentials": "tentative_differentials",
+        "differentials": "tentative_differentials",
+        "differential": "tentative_differentials",
+        "follow_up": "follow_up_questions",
+        "followup_questions": "follow_up_questions",
+        "questions": "follow_up_questions",
+        "red_flag": "red_flags",
+        "reasoning": "clinical_rationale",
+        "rationale": "clinical_rationale",
+    },
+    "test_recommendation": {
+        "working_differentials": "working_differential",
+        "tentative_differentials": "working_differential",
+        "differentials": "working_differential",
+        "differential": "working_differential",
+        "recommended_test": "recommended_tests",
+        "priority_tests": "recommended_tests",
+        "investigations": "recommended_tests",
+        "tests": "recommended_tests",
+        "rationale_for_test": "rationale_for_tests",
+        "test_rationale": "rationale_for_tests",
+        "clinical_rationale": "rationale_for_tests",
+        "reasoning": "rationale_for_tests",
+        "rationale": "rationale_for_tests",
+    },
+    "advisory_conclusion": {
+        "final_diagnosis": "likely_diagnosis",
+        "diagnosis": "likely_diagnosis",
+        "confidence": "diagnostic_confidence",
+        "management": "management_options",
+        "treatment": "management_options",
+        "treatment_options": "management_options",
+        "first_step": "recommended_first_step",
+        "further_investigations": "further_investigations_if_needed",
+        "advisory_note": "clinical_advisory_note",
+        "clinical_note": "clinical_advisory_note",
+    },
+}
+
+
+def _canonicalise(data, reasoning_type: str | None):
+    """
+    Rename drifted keys onto the ones the consumers actually read.
+
+    An alias is applied only when the canonical key is absent, so a response
+    that already uses the documented name is never overwritten by a synonym
+    the model happened to emit alongside it.
+    """
+    aliases = _KEY_ALIASES.get(reasoning_type or "")
+    if not aliases or not isinstance(data, dict):
+        return data
+    for alias, canonical in aliases.items():
+        if alias in data and canonical not in data:
+            data[canonical] = data.pop(alias)
+    return data
+
+
+def parse_response(raw: str, reasoning_type: str | None = None) -> dict:
+    """
+    Extract and parse JSON from model output.
+
+    Pass the stage as `reasoning_type` to have key drift corrected; without it
+    the response is returned exactly as the model wrote it.
+    """
     try:
-        return json.loads(raw)
+        return _canonicalise(json.loads(raw), reasoning_type)
     except Exception:
         pass
     match = re.search(r'\{.*\}', raw, re.DOTALL)
     if match:
         try:
-            return json.loads(match.group(0))
+            return _canonicalise(json.loads(match.group(0)), reasoning_type)
         except Exception:
             pass
     return {"raw_response": raw}
@@ -429,7 +499,7 @@ def diagnose(
 
     prompt = build_prompt(symptoms, duration_days, age_group, sex, reasoning_type, extra)
     raw, elapsed = run_inference(prompt, timeout=timeout)
-    parsed = parse_response(raw)
+    parsed = parse_response(raw, reasoning_type)
     return {
         "response": parsed,
         "raw": raw,

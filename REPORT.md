@@ -83,6 +83,85 @@ Three interfaces share a single inference layer (`inference/aletheia.py`):
 - **Terminal CLI** (`cli.py`) - sequential, requires non-empty input at each stage gate
 - **Single-stage CLI** (`run.py`) - for scripting and profiler integration; accepts `--stage` and `--extra` arguments
 
+### Session recall
+
+A stage on the target hardware costs 40–60 s of CPU time, and district practice is
+repetitive: the same presentation walks into the same clinic several times in a season.
+Re-deriving an answer the clinician has already seen and accepted spends the scarcest
+resource on the machine to arrive back where it started. Aletheia therefore treats a
+completed session as something worth keeping.
+
+**At the end of a session** the clinician is offered three things, and none of them is
+the default:
+
+1. **Save** — keep the results as they stand.
+2. **Edit, then save** — correct the output first, then keep the corrected version.
+3. **Exit without saving** — discard everything; nothing is written.
+
+The middle option carries most of the clinical value. What is stored after an edit is no
+longer a model output: it is a record a clinician read, corrected and signed off. A saved
+case is marked with which of the two it is, because the difference matters when it is
+recalled later.
+
+**On a later session**, a presentation that matches a saved case is answered from the
+record instead of from the model. The match is computed over the inputs that define the
+situation — the normalised symptom set, the duration band, the age group, the sex, the
+stage being run, and that stage's own input (the follow-up answers for Stage 2, the
+investigation results for Stage 3). A stage whose inputs differ falls through to the
+model as normal, so recall never spreads an answer beyond the case it was recorded for.
+
+Four rules govern recall, and each exists to stop a specific failure:
+
+- **A recalled result is always labelled as recalled.** It is shown with the date it was
+  saved and whether it was clinician-edited. A cached recommendation presented as a fresh
+  one invites a clinician to read corroboration into what is only repetition.
+- **A fresh run is always available.** The clinician can reject the recalled result and
+  run the model, whatever the match quality. Recall is an offer, never a substitution.
+- **The safety screen runs before recall, not after.** The refusals in
+  `inference/safety.py` are evaluated on the incoming request, so a hazardous input — a
+  paediatric dosing question, for instance — is refused on a cache hit exactly as it is on
+  a cold run. Recall cannot become a route around a guardrail.
+- **Saved cases age.** Clinical guidance changes, and a record has a date on it for that
+  reason. A saved case past a configurable age is surfaced with its age shown, so the
+  clinician decides whether year-old reasoning still applies.
+
+**A saved case describes a presentation, not a person.** Aletheia has no field in which
+a patient identity could be recorded — the input schema is the symptom list, the duration
+in days, an age *band* rather than a date of birth, and sex. There is no name, no patient
+number, no facility, no admission date, and nothing that could be joined against a
+register to recover one. A saved case is therefore the same clinical shape as a textbook
+vignette: symptoms in, investigations and reasoning out. This is a property of the schema
+rather than a promise about handling — the identifiers are not protected, they are never
+collected in the first place, so the store has nothing to leak even if the laptop is lost.
+
+The one channel that remains is the free-text boxes, since a clinician typing a
+presentation could type a name into it. The save step therefore warns before writing when
+the text it is about to store looks like it carries an identifier, and the field guidance
+asks for the presentation only.
+
+Storage is a plain JSON file on the local disk, alongside the model weights. It is never
+synced, transmitted, or sent anywhere — the offline guarantee in the architecture above
+covers saved cases as completely as it covers inference. The file is readable and
+deletable by the clinician who owns the machine, and the system runs normally when it is
+absent or has been cleared.
+
+The store lives in `inference/recall.py`, behind the same self-check convention as the
+safety module — `python3 -m inference.recall` asserts the key behaviour, including that a
+corrupt store reads as empty rather than raising, since recall is an optimisation and
+inference is the product. Writes are atomic, because the laptops this targets lose power:
+the worst outcome of an interrupted save is losing the newest case, never the store.
+
+All three interfaces reach it. The web console asks the store before each stage and, on a
+hit, shows the provenance banner with a *Run the model anyway* button beside it; on a
+fresh result it offers save, edit-then-save, or nothing. The terminal CLI offers the same
+three choices once at the end of a consultation and saves each stage that actually ran.
+`run.py` takes `--recall`, `--save`, `--list-cases` and `--forget`.
+
+Recall is **opt-in in `run.py` alone**, and deliberately so: a scripted run — a benchmark
+above all — must measure the model, and a store that silently answered on its behalf
+would report throughput that no inference produced. The Section 4 figures are cold-run
+measurements and are unaffected by this feature.
+
 ---
 
 ## 3. Constraints
@@ -215,6 +294,6 @@ Aletheia is a decision support tool, not an autonomous clinical actor. Several d
 - The pipeline cannot be short-circuited to a final output without passing through all prior stages.
 - Stage 3 output uses the word "advisory" in both the section header and a required JSON field (`clinical_advisory_note`) that instructs the model to reiterate the clinician's decision authority.
 - The system is framed as a "second opinion" and "structured reasoning support," not as a replacement for clinical training or specialist consultation.
-- No patient data is stored, transmitted, or logged by the system.
+- No patient identity is ever collected. The system has no name, patient-number or date-of-birth field — only symptoms, a duration, an age band and sex — so its records describe a presentation and cannot be traced to a person. Nothing is stored or logged unless the clinician explicitly saves a session, and nothing is ever transmitted. Saved cases (see *Session recall*) live in a single local file the clinician can read or delete, and a recalled result is always labelled as a recall rather than presented as a fresh assessment.
 
 The African Deep Tech Challenge's vision of locally-run, low-resource-appropriate AI is directly aligned with Aletheia's design: a tool that is useful precisely because it works in the places where cloud-dependent tools fail.

@@ -97,3 +97,6 @@ recordings/
 
 *.zip
 aletheia paper/
+# Saved cases live beside the model weights on a deployed machine; this is
+# the fallback location when the model path is unavailable.
+aletheia_cases.json

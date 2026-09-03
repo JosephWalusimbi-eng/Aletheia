@@ -30,8 +30,9 @@ try:
 except ImportError:
     HAS_RICH = False
 
-from inference.aletheia import build_prompt, run_inference
+from inference.aletheia import build_prompt, parse_response, run_inference
 from inference.safety import HazardRefusal, screen
+from inference import recall
 
 console = Console() if HAS_RICH else None
 
@@ -74,18 +75,15 @@ def rule(title=""):
     else:
         print(f"\n{'─'*55} {title}")
 
-def parse_json(raw: str) -> dict:
-    try:
-        return json.loads(raw)
-    except Exception:
-        pass
-    match = re.search(r'\{.*\}', raw, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(0))
-        except Exception:
-            pass
-    return {}
+def parse_json(raw: str, stage: str = "") -> dict:
+    """Parse a stage's output through the shared parser.
+
+    inference.parse_response also folds the key names a 3B model drifts onto
+    back to the documented schema, so the terminal and the web console read the
+    same response the same way.
+    """
+    data = parse_response(raw, stage or None)
+    return {} if "raw_response" in data and len(data) == 1 else data
 
 # ── Display functions ─────────────────────────────────────────
 def display_followup_questions(data: dict) -> list:
@@ -301,20 +299,196 @@ def collect_symptoms() -> tuple:
     return symptoms, duration, age_group, sex
 
 
+# ── Saved cases ───────────────────────────────────────────────
+# A stage costs the better part of a minute on the target laptop, and the same
+# presentation arrives more than once. A finished stage can be kept, and a later
+# stage with the same inputs can be answered from the record. Nothing is written
+# unless the clinician says so, and a recalled result always says where it came
+# from. See inference/recall.py.
+
+EDITABLE_FIELDS = {
+    "initial_with_followup": [
+        ("follow_up_questions", "Follow-up questions", "list"),
+        ("tentative_differentials", "Tentative differential", "diff"),
+        ("red_flags", "Red flags", "list"),
+        ("clinical_rationale", "Clinical rationale", "text"),
+    ],
+    "test_recommendation": [
+        ("recommended_tests", "Recommended investigations", "list"),
+        ("working_differential", "Working differential", "diff"),
+        ("rationale_for_tests", "Rationale for investigations", "text"),
+    ],
+    "advisory_conclusion": [
+        ("likely_diagnosis", "Likely diagnosis", "text"),
+        ("diagnostic_confidence", "Diagnostic confidence", "text"),
+        ("management_options", "Management options", "list"),
+        ("recommended_first_step", "Suggested first step", "text"),
+        ("further_investigations_if_needed", "Further investigations if needed", "list"),
+        ("clinical_advisory_note", "Clinical advisory note", "text"),
+    ],
+}
+
+STAGE_TITLES = {
+    "initial_with_followup": "Stage 1 — assessment and follow-up questions",
+    "test_recommendation": "Stage 2 — investigation recommendations",
+    "advisory_conclusion": "Stage 3 — clinical advisory",
+}
+
+
+def _field_to_text(kind: str, value) -> str:
+    if kind == "list":
+        return ", ".join(str(v) for v in (value or []))
+    if kind == "diff":
+        parts = []
+        for d in (value or []):
+            prob = d.get("probability", 0) or 0
+            cell = f"{d.get('condition','')}|{round(prob * 100)}"
+            if d.get("severity"):
+                cell += f"|{d['severity']}"
+            parts.append(cell)
+        return ", ".join(parts)
+    return "" if value is None else str(value)
+
+
+def _text_to_field(kind: str, text: str):
+    if kind == "text":
+        return text.strip()
+    items = [p.strip() for p in text.split(",") if p.strip()]
+    if kind == "list":
+        return items
+    rows = []
+    for item in items:
+        bits = [b.strip() for b in item.split("|")]
+        try:
+            prob = float(bits[1]) if len(bits) > 1 else 0.0
+        except ValueError:
+            prob = 0.0
+        row = {"condition": bits[0], "probability": prob / 100 if prob > 1 else prob}
+        if len(bits) > 2 and bits[2]:
+            row["severity"] = bits[2]
+        rows.append(row)
+    return rows
+
+
+def offer_recall(case) -> bool:
+    """Show a saved case and ask whether to use it. This never decides alone."""
+    cprint(f"\n[bold green]{case.provenance()}[/bold green]"
+           if HAS_RICH else f"\n{case.provenance()}")
+    cprint("[dim]This was not generated just now. Answering from the record skips "
+           "about a minute of inference; running the model is always available.[/dim]"
+           if HAS_RICH else
+           "This was not generated just now. Running the model is always available.")
+    return confirm("Use this saved result instead of running the model?")
+
+
+def edit_stage(stage: str, data: dict) -> tuple[dict, bool]:
+    """Walk the clinician through correcting one stage before it is stored.
+
+    Press Enter to keep a field as it is. What comes out of here is a record a
+    clinician has reviewed, which is why it is stored as clinician-edited.
+    """
+    out = dict(data)
+    edited = False
+    cprint(f"\n[bold]{STAGE_TITLES.get(stage, stage)}[/bold]"
+           if HAS_RICH else f"\n{STAGE_TITLES.get(stage, stage)}")
+    cprint("[dim]Enter to keep a field. Lists are comma-separated. Differential "
+           "entries are Condition|probability|severity.[/dim]"
+           if HAS_RICH else
+           "Enter to keep. Lists comma-separated; differential as Condition|probability|severity.")
+    for key, label, kind in EDITABLE_FIELDS.get(stage, []):
+        current = _field_to_text(kind, out.get(key))
+        cprint(f"\n[dim]{label}:[/dim] {current or '(empty)'}"
+               if HAS_RICH else f"\n{label}: {current or '(empty)'}")
+        replacement = get_input("  New value (Enter to keep)")
+        if replacement:
+            out[key] = _text_to_field(kind, replacement)
+            edited = True
+    return out, edited
+
+
+def offer_to_keep(stages, symptoms, duration, age_group, sex) -> None:
+    """End of consultation: save, edit then save, or exit with nothing written."""
+    fresh = [s for s in stages if s["recalled"] is None and s["data"]]
+    if not fresh:
+        return
+
+    rule("KEEP THIS CONSULTATION?")
+    cprint(
+        f"{len(fresh)} stage(s) ran on the model. Saving keeps them so the same "
+        "presentation is answered from the record next time instead of costing "
+        "another minute of CPU.\n"
+        "Saved cases hold the presentation only — Aletheia never records who the "
+        "patient is."
+    )
+    cprint("  [bold]s[/bold] save as generated    [bold]e[/bold] edit, then save    "
+           "[bold]n[/bold] do not save"
+           if HAS_RICH else
+           "  s  save as generated    e  edit, then save    n  do not save")
+    choice = (get_input("Choose", "n") or "n").strip().lower()[:1]
+    if choice not in ("s", "e"):
+        cprint("[dim]Nothing was saved.[/dim]" if HAS_RICH else "Nothing was saved.")
+        return
+
+    # The schema collects no identity, so the free-text boxes are the only route
+    # one could take. Warn once; the clinician decides.
+    warning = recall.identifier_warning(", ".join(symptoms),
+                                        *[s["extra"] for s in fresh])
+    if warning:
+        cprint(f"\n[bold yellow]{warning}[/bold yellow]"
+               if HAS_RICH else f"\n{warning}")
+        if not confirm("Save anyway?"):
+            cprint("[dim]Nothing was saved.[/dim]" if HAS_RICH else "Nothing was saved.")
+            return
+
+    saved = 0
+    for s in fresh:
+        data, edited = s["data"], False
+        if choice == "e":
+            data, edited = edit_stage(s["stage"], data)
+        try:
+            recall.save(symptoms, duration, age_group, sex, s["stage"], data,
+                        s["extra"], edited=edited)
+            saved += 1
+        except Exception as exc:
+            cprint(f"[bold red]Could not save {s['stage']}:[/bold red] {exc}"
+                   if HAS_RICH else f"Could not save {s['stage']}: {exc}")
+
+    if saved:
+        cprint(f"\n[bold green]Saved {saved} stage(s).[/bold green] "
+               f"[dim]Store: {recall.store_path()}[/dim]"
+               if HAS_RICH else
+               f"\nSaved {saved} stage(s). Store: {recall.store_path()}")
+
+
 # ── Inference wrapper ─────────────────────────────────────────
 def run_stage(reasoning_type: str, symptoms, duration, age_group, sex,
-              extra: str = "") -> tuple[dict, float]:
-    # Refused in code, before the prompt exists. See inference/safety.py.
+              extra: str = "") -> tuple[dict, float, object]:
+    """Run one stage, offering a saved case first.
+
+    Returns (data, elapsed, recalled), where `recalled` is the saved case that
+    was used or None when the model ran.
+    """
+    # Refused in code, before the prompt exists and before the case store is
+    # read, so a hazardous request is refused on a matched case exactly as it is
+    # on a cold run. See inference/safety.py.
     refusal = screen(", ".join(symptoms), extra)
     if refusal is not None:
         raise HazardRefusal(refusal)
+
+    try:
+        saved = recall.lookup(symptoms, duration, age_group, sex,
+                              reasoning_type, extra)
+    except Exception:
+        saved = None          # a broken store must never block a consultation
+    if saved is not None and offer_recall(saved):
+        return saved.data, 0.0, saved
 
     prompt = build_prompt(symptoms, duration, age_group, sex, reasoning_type, extra=extra)
 
     cprint("\n[dim]Running inference...[/dim]" if HAS_RICH else "\nRunning inference...")
     raw, elapsed = run_inference(prompt, timeout=600)
 
-    return parse_json(raw), elapsed
+    return parse_json(raw, reasoning_type), elapsed, None
 
 
 def display_refusal(stage: int, refusal) -> None:
@@ -345,7 +519,7 @@ def run_case():
     )
 
     try:
-        data1, elapsed1 = run_stage(
+        data1, elapsed1, recalled1 = run_stage(
             "initial_with_followup", symptoms, duration, age_group, sex
         )
     except HazardRefusal as r:
@@ -394,7 +568,7 @@ def run_case():
         )
 
     try:
-        data2, elapsed2 = run_stage(
+        data2, elapsed2, recalled2 = run_stage(
             "test_recommendation", symptoms, duration, age_group, sex,
             extra=followup_answers,
         )
@@ -452,7 +626,7 @@ def run_case():
         return True
 
     try:
-        data3, elapsed3 = run_stage(
+        data3, elapsed3, recalled3 = run_stage(
             "advisory_conclusion", symptoms, duration, age_group, sex,
             extra=test_results,
         )
@@ -466,6 +640,18 @@ def run_case():
 
     display_advisory(data3, elapsed3)
     display_rationale(data3)
+
+    offer_to_keep(
+        [
+            {"stage": "initial_with_followup", "extra": "",
+             "data": data1, "recalled": recalled1},
+            {"stage": "test_recommendation", "extra": followup_answers,
+             "data": data2, "recalled": recalled2},
+            {"stage": "advisory_conclusion", "extra": test_results,
+             "data": data3, "recalled": recalled3},
+        ],
+        symptoms, duration, age_group, sex,
+    )
     return True
 
 

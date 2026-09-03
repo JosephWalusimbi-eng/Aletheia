@@ -25,6 +25,10 @@ Three routes matter:
                           A stage takes 40-60 s; streaming means the reader sees
                           the answer being written instead of a still spinner.
   POST /api/stage         the original blocking JSON call, kept for scripts.
+  POST /api/recall/*      lookup | save | delete against the saved-case store.
+                          A stage the clinician has already seen and accepted
+                          need not cost another 40-60 s of CPU to see again.
+                          These routes report and record; they never decide.
 
 Binding: 127.0.0.1 by default. This tool handles patient presentations, so it
 is not exposed to the ward LAN unless someone deliberately sets ALETHEIA_HOST.
@@ -47,6 +51,7 @@ from inference.aletheia import (
     stream_inference,
 )
 from inference.safety import HAZARD_CLASSES, HazardRefusal, screen
+from inference import recall
 
 UI_FILE = Path(__file__).resolve().parent / "ui" / "index.html"
 
@@ -71,11 +76,17 @@ STAGE_NEEDS_EXTRA = {
 _inference_lock = threading.Lock()
 
 
-def prepare(payload: dict) -> tuple[str, str, int]:
-    """Validate a request and turn it into (stage, prompt, timeout).
+def case_inputs(payload: dict) -> dict:
+    """Validate a request and return the inputs that define the situation.
 
-    Raises ValueError for bad input and HazardRefusal for a refused one, both
-    before any subprocess is started.
+    Shared by inference and by recall so the two can never disagree about what
+    the clinician asked: a saved case is keyed on exactly the values that would
+    have been sent to the model.
+
+    Raises ValueError for bad input and HazardRefusal for a refused one. The
+    screen runs here, which is what puts it ahead of recall as well as ahead of
+    inference — a hazardous request is refused on a matched case exactly as it
+    is on a cold run.
     """
     stage = payload.get("stage", "initial_with_followup")
     if stage not in VALID_STAGES:
@@ -90,20 +101,35 @@ def prepare(payload: dict) -> tuple[str, str, int]:
     if stage in STAGE_NEEDS_EXTRA and not extra:
         raise ValueError(f"This stage needs {STAGE_NEEDS_EXTRA[stage]}.")
 
-    # Screened on the text as typed, before the prompt exists.
+    # Screened on the text as typed, before the prompt exists and before the
+    # case store is consulted.
     refusal = screen(raw_symptoms, extra)
     if refusal is not None:
         raise HazardRefusal(refusal)
 
+    return {
+        "stage": stage,
+        "symptoms": symptoms,
+        "duration_days": int(payload.get("duration", 1)),
+        "age_group": payload.get("age", "adult"),
+        "sex": payload.get("sex", "unknown"),
+        "extra": extra,
+        "raw_symptoms": raw_symptoms,
+    }
+
+
+def prepare(payload: dict) -> tuple[str, str, int]:
+    """Validate a request and turn it into (stage, prompt, timeout)."""
+    c = case_inputs(payload)
     prompt = build_prompt(
-        symptoms=symptoms,
-        duration_days=int(payload.get("duration", 1)),
-        age_group=payload.get("age", "adult"),
-        sex=payload.get("sex", "unknown"),
-        reasoning_type=stage,
-        extra=extra,
+        symptoms=c["symptoms"],
+        duration_days=c["duration_days"],
+        age_group=c["age_group"],
+        sex=c["sex"],
+        reasoning_type=c["stage"],
+        extra=c["extra"],
     )
-    return stage, prompt, int(payload.get("timeout", 600))
+    return c["stage"], prompt, int(payload.get("timeout", 600))
 
 
 def run_stage(payload: dict) -> dict:
@@ -112,7 +138,7 @@ def run_stage(payload: dict) -> dict:
     with _inference_lock:
         raw, elapsed = run_inference(prompt, timeout=timeout)
     return {"ok": True, "stage": stage, "elapsed": elapsed,
-            "data": parse_response(raw), "raw": raw}
+            "data": parse_response(raw, stage), "raw": raw}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -186,6 +212,10 @@ class Handler(BaseHTTPRequestHandler):
                 "busy": _inference_lock.locked(),
                 "hazard_classes": list(HAZARD_CLASSES),
             })
+            try:
+                info["recall"] = recall.stats()
+            except Exception:
+                info["recall"] = {"count": 0, "edited": 0, "stale": 0, "path": ""}
             self._send_json(200, info)
         else:
             self._send(404, b"Not found", "text/plain")
@@ -200,8 +230,84 @@ class Handler(BaseHTTPRequestHandler):
             self._post_stage()
         elif path == "/api/stage/stream":
             self._post_stage_stream()
+        elif path == "/api/recall/lookup":
+            self._post_recall_lookup()
+        elif path == "/api/recall/save":
+            self._post_recall_save()
+        elif path == "/api/recall/delete":
+            self._post_recall_delete()
         else:
             self._send(404, b"Not found", "text/plain")
+
+    # ---- recall -------------------------------------------------------------
+    # Three small routes, and none of them decides anything. Lookup reports
+    # whether a record exists, save writes one the clinician asked to keep, and
+    # delete removes one. What to do with a hit is the clinician's call, made in
+    # the interface, every time.
+
+    def _recall_guarded(self, handler):
+        """Run a recall route with the same guards inference gets."""
+        try:
+            payload = self._read_payload()
+        except Exception:
+            self._send_json(400, {"ok": False, "error": "Malformed request."})
+            return
+        try:
+            self._send_json(200, handler(payload))
+        except HazardRefusal as exc:
+            self._send_json(200, {"ok": False, "refused": exc.refusal.to_dict()})
+        except ValueError as exc:
+            self._send_json(400, {"ok": False, "error": str(exc)})
+        except Exception as exc:
+            # A broken case store must never stop a clinician working: the
+            # caller treats a failed lookup as a miss and runs the model.
+            self._send_json(200, {"ok": False, "error": f"Case store unavailable: {exc}"})
+
+    def _post_recall_lookup(self):
+        def handler(payload):
+            c = case_inputs(payload)          # screens before the store is read
+            case = recall.lookup(
+                c["symptoms"], c["duration_days"], c["age_group"],
+                c["sex"], c["stage"], c["extra"],
+            )
+            if case is None:
+                return {"ok": True, "hit": False}
+            return {
+                "ok": True,
+                "hit": True,
+                "case": case.to_dict(),
+                "provenance": case.provenance(),
+            }
+        self._recall_guarded(handler)
+
+    def _post_recall_save(self):
+        def handler(payload):
+            c = case_inputs(payload)
+            data = payload.get("data")
+            if not isinstance(data, dict) or not data:
+                raise ValueError("Nothing to save.")
+
+            # The schema collects no identity, so the free-text boxes are the
+            # only way one could arrive. Warn once; the clinician decides.
+            warning = recall.identifier_warning(c["raw_symptoms"], c["extra"])
+            if warning and not payload.get("confirm"):
+                return {"ok": False, "needs_confirmation": True, "warning": warning}
+
+            case = recall.save(
+                c["symptoms"], c["duration_days"], c["age_group"], c["sex"],
+                c["stage"], data, c["extra"], edited=bool(payload.get("edited")),
+            )
+            return {"ok": True, "saved_on": case.saved_on,
+                    "edited": case.edited, "key": case.key}
+        self._recall_guarded(handler)
+
+    def _post_recall_delete(self):
+        def handler(payload):
+            key = (payload.get("key") or "").strip()
+            if not key:
+                raise ValueError("No case key given.")
+            return {"ok": True, "deleted": recall.delete(key)}
+        self._recall_guarded(handler)
 
     def _post_stage(self):
         try:
@@ -268,7 +374,7 @@ class Handler(BaseHTTPRequestHandler):
                             "tokens": item["tokens"],
                             "tokens_per_second": item["tokens_per_second"],
                             "measured": item["measured"],
-                            "data": parse_response(item["text"]),
+                            "data": parse_response(item["text"], stage),
                             "raw": item["text"],
                         })
             finally:

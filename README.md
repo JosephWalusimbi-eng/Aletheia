@@ -102,8 +102,9 @@ ALETHEIA_PORT=8080     python3 aletheia/server.py   # different port
 ```
 
 Routes: `GET /api/status` (runtime facts), `POST /api/stage/stream`
-(server-sent events: `refused` | `token` | `result` | `error`), and
-`POST /api/stage` (the original blocking JSON call, kept for scripts).
+(server-sent events: `refused` | `token` | `result` | `error`),
+`POST /api/stage` (the original blocking JSON call, kept for scripts), and
+`POST /api/recall/lookup` | `/save` | `/delete` for saved cases.
 
 ### Interactive Terminal (`cli.py`)
 A rich terminal interface that walks through all three stages sequentially:
@@ -133,6 +134,53 @@ python3 run.py --symptoms "fever, headache, neck stiffness" --duration 2 \
 
 # Output raw JSON
 python3 run.py --symptoms "fever, headache" --duration 3 --json
+
+# Saved cases: answer from the store when one matches, and keep this result
+python3 run.py --symptoms "fever, headache" --duration 3 --recall --save
+python3 run.py --list-cases
+python3 run.py --forget <key>
+```
+
+Recall is opt-in here and nowhere else. A scripted run — a benchmark above all —
+must measure the model, and a store that quietly answered for it would report
+throughput that no inference produced.
+
+---
+
+## Saved cases
+
+A stage costs 40-60 s on the target laptop, and the same presentation walks in
+more than once. So a finished stage can be kept, and a later stage with the same
+inputs can be answered from the record instead of from llama.cpp.
+
+At the end of a run you are offered three things, with no default: **save**,
+**edit then save**, or **exit without saving**. The middle one carries the
+clinical value — what is stored after an edit is a record a clinician read,
+corrected and signed off, and it is marked as such when it comes back.
+
+A match is computed over the normalised symptom set, the duration band, the age
+group, the sex, the stage, and that stage's own input. Four rules hold:
+
+- A recalled result says so, with its date and whether it was edited. It is
+  never dressed up as a fresh answer.
+- The model is always one click or keystroke away, whatever the store returned.
+- The safety screen runs **before** recall, so a paediatric dosing question is
+  refused on a matched case exactly as on a cold run.
+- Cases age. Past a configurable threshold they are shown with their age, so
+  you can judge whether year-old reasoning still applies.
+
+A saved case describes a presentation, not a person: Aletheia has no field in
+which a patient identity could be recorded — symptoms, a duration, an age *band*
+and sex — so the store has nothing to disclose even if the laptop is lost. The
+free-text boxes are the one channel left, so the save step warns when the text
+looks like it names someone.
+
+The store is one JSON file beside the model weights (override with
+`ALETHEIA_CASE_STORE`), never synced and never transmitted. Delete it and
+Aletheia runs exactly as before.
+
+```bash
+python3 -m inference.recall     # self-checks for the store and the case key
 ```
 
 ---

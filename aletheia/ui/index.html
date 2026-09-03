@@ -184,6 +184,65 @@ ul.flags li::before{content:"!";position:absolute;left:6px}
   border-top:1px solid var(--line);margin-top:12px;padding-top:10px;
   font-size:.84rem;color:var(--muted);font-style:italic;
 }
+
+/* ---- saved cases -------------------------------------------------------
+   A finished stage cost 40-60 s of CPU. The clinician is offered the chance to
+   keep it, correct it first, or throw it away — three buttons, no default, and
+   nothing written unless one is pressed. A recalled result is never dressed up
+   as a fresh one: the banner says where it came from, when it was saved and
+   whether a clinician corrected it, and the button to ignore it and run the
+   model is always right there. */
+.keep{
+  border:1px solid var(--line);border-radius:10px;background:var(--surface-2);
+  padding:11px 14px;margin-top:14px;display:flex;align-items:center;
+  gap:10px;flex-wrap:wrap;font-size:.87rem;
+}
+.keep .kq{margin:0;flex:1 1 230px;color:var(--muted)}
+.keep button{
+  font:inherit;font-weight:600;cursor:pointer;border-radius:7px;padding:6px 13px;
+  border:1px solid var(--jade);background:var(--surface);color:var(--jade-dark);
+}
+.keep button:hover{background:#e8f6ef}
+.keep button.primary{background:var(--jade);border-color:var(--jade);color:var(--accent-ink)}
+.keep button.primary:hover{background:var(--jade-dark)}
+.keep button.plain{border-color:var(--line);color:var(--muted)}
+.keep button.plain:hover{background:var(--surface)}
+.keep.done{border-color:var(--jade);background:#eaf7f1}
+.keep.warn{border-color:var(--warn);background:var(--warn-bg)}
+.keep.warn .kq{color:var(--warn)}
+
+.recalled{
+  border:1px solid var(--jade);border-left-width:4px;background:#eaf7f1;
+  border-radius:10px;padding:11px 15px;margin-top:14px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.recalled .rtag{
+  display:inline-block;font-family:var(--mono);font-size:.68rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--jade-deep);
+  border:1px solid var(--jade);border-radius:4px;padding:2px 7px;
+}
+.recalled p{margin:0;flex:1 1 240px;font-size:.87rem}
+.recalled.stale{border-color:var(--warn);background:var(--warn-bg)}
+.recalled.stale .rtag{color:var(--warn);border-color:var(--warn)}
+.recalled button{
+  font:inherit;font-size:.87rem;font-weight:600;cursor:pointer;border-radius:7px;
+  padding:6px 13px;border:1px solid var(--jade);background:var(--surface);
+  color:var(--jade-dark);
+}
+.recalled button:hover{background:var(--surface-2)}
+
+.editor{margin-top:14px;border:1px solid var(--jade);border-radius:10px;
+  background:var(--surface);padding:13px 15px}
+.editor h4{margin:0 0 3px;font-size:.95rem}
+.editor .hint{margin:0 0 12px;font-size:.82rem;color:var(--muted)}
+.editor label{display:block;margin:11px 0 4px;font-size:.83rem;font-weight:600}
+.editor label span{font-weight:400;color:var(--muted)}
+.editor textarea{
+  width:100%;font:inherit;font-size:.87rem;padding:8px 10px;border-radius:8px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  resize:vertical;min-height:52px;
+}
+.editor textarea:focus{outline:2px solid var(--jade);outline-offset:-1px}
 footer{text-align:center;color:var(--muted);font-size:.8rem;padding:18px;
   border-top:1px solid var(--line);margin-top:8px}
 footer .hz{font-family:var(--mono);font-size:.74rem;display:block;margin-top:5px}
@@ -248,6 +307,7 @@ footer .hz{font-family:var(--mono);font-size:.74rem;display:block;margin-top:5px
   <div class="status" id="st1" role="status" aria-live="polite"></div>
   <pre class="live" id="lv1" aria-hidden="true"></pre>
   <div id="rf1"></div>
+  <div id="rc1"></div>
   <div class="grid" style="margin-top:14px">
     <div>
       <p class="ptitle">Follow-up questions <span>(answer all before Step 2)</span></p>
@@ -268,6 +328,7 @@ footer .hz{font-family:var(--mono);font-size:.74rem;display:block;margin-top:5px
       <div class="panel" id="out1d"><span class="empty">Awaiting Step 1.</span></div>
     </div>
   </div>
+  <div id="kp1"></div>
 </section>
 
 <section class="card locked" id="card2">
@@ -283,6 +344,7 @@ footer .hz{font-family:var(--mono);font-size:.74rem;display:block;margin-top:5px
   <div class="status" id="st2" role="status" aria-live="polite"></div>
   <pre class="live" id="lv2" aria-hidden="true"></pre>
   <div id="rf2"></div>
+  <div id="rc2"></div>
   <div class="grid" style="margin-top:14px">
     <div>
       <p class="ptitle">Recommended investigations <span>(perform before Step 3)</span></p>
@@ -299,6 +361,7 @@ footer .hz{font-family:var(--mono);font-size:.74rem;display:block;margin-top:5px
     <strong>Clinician action required.</strong> Perform the investigations listed above.
     Aletheia does not simulate or perform tests. Return with the real results.
   </div>
+  <div id="kp2"></div>
 </section>
 
 <section class="card locked" id="card3">
@@ -314,10 +377,12 @@ footer .hz{font-family:var(--mono);font-size:.74rem;display:block;margin-top:5px
   <div class="status" id="st3" role="status" aria-live="polite"></div>
   <pre class="live" id="lv3" aria-hidden="true"></pre>
   <div id="rf3"></div>
+  <div id="rc3"></div>
   <div style="margin-top:14px">
     <p class="ptitle">Clinical advisory</p>
     <div class="panel" id="out3a"><span class="empty">Complete Steps 1 and 2 first.</span></div>
   </div>
+  <div id="kp3"></div>
 </section>
 
 <footer>
@@ -484,11 +549,7 @@ function call(stage, extra, statusEl, liveEl, refuseEl, btn, onDone){
     status(statusEl, "err", msg);
   }
 
-  var body = JSON.stringify({
-    stage: stage, symptoms: symptoms,
-    duration: Number($("duration").value || 1),
-    age: $("age").value, sex: $("sex").value, extra: extra
-  });
+  var body = JSON.stringify(stageBody(stage, extra));
 
   function handle(name, data){
     if (name === "queued"){ queued = true; return; }
@@ -573,8 +634,13 @@ function call(stage, extra, statusEl, liveEl, refuseEl, btn, onDone){
   }
 }
 
-$("btn1").onclick = function(){
-  call("initial_with_followup", "", $("st1"), $("lv1"), $("rf1"), $("btn1"), function(d){
+/* ---- rendering one stage's output ---------------------------------------
+   Kept in one place because three different things now feed it: a fresh run,
+   a case recalled from the store, and a correction the clinician has just
+   typed. They must look identical on screen — the banner above says where the
+   content came from, and nothing else should have to. */
+function renderStage(stage, d){
+  if (stage === "initial_with_followup"){
     setPanel($("out1a"), listHTML(first(d, ["follow_up_questions","follow_up","questions"])),
              "No follow-up questions were returned.");
     setPanel($("out1b"), diffTable(first(d, ["tentative_differentials","ranked_differentials","differentials"]), true),
@@ -585,49 +651,325 @@ $("btn1").onclick = function(){
              "No red flags identified.");
     var rat = first(d, ["clinical_rationale","reasoning"]);
     setPanel($("out1d"), rat ? esc(rat) : null, "No rationale returned.");
-    unlock($("card2"), $("btn2"));
+    return;
+  }
+
+  if (stage === "test_recommendation"){
+    setPanel($("out2a"), listHTML(first(d, ["recommended_tests","priority_tests","investigations"])),
+             "No investigations returned.");
+    setPanel($("out2b"), diffTable(first(d, ["working_differential","working_differentials","tentative_differentials","differentials"]), false),
+             "No working differential returned.");
+    var r2 = first(d, ["rationale_for_tests","clinical_rationale","reasoning"]);
+    setPanel($("out2c"), r2 ? esc(r2) : null, "No rationale returned.");
+    return;
+  }
+
+  var dx = first(d, ["likely_diagnosis","final_diagnosis","diagnosis"]);
+  var conf = d.diagnostic_confidence || "";
+  var opts = first(d, ["management_options","management","treatment"]);
+  var step = d.recommended_first_step || "";
+  var more = first(d, ["further_investigations_if_needed"]);
+  var note = d.clinical_advisory_note || "";
+  if (!dx && !opts && !step){
+    setPanel($("out3a"), null, "No advisory returned. Check the model output.");
+    return;
+  }
+  var h = "";
+  if (dx) h += '<p class="ptitle">Likely diagnosis</p><p>' + esc(dx) +
+               (conf ? ' <span class="sev High">confidence: ' + esc(conf) + "</span>" : "") + "</p>";
+  if (opts) h += '<p class="ptitle">Management options for your consideration</p>' + listHTML(opts);
+  if (step) h += '<p class="ptitle">Suggested first step</p><p>' + esc(step) + "</p>";
+  if (more) h += '<p class="ptitle">Further investigations if needed</p>' + listHTML(more);
+  h += '<div class="advisory-note">' +
+       esc(note || "The treating clinician retains full authority over all management decisions.") +
+       "</div>";
+  setPanel($("out3a"), h, "");
+}
+
+/* ---- saved cases --------------------------------------------------------
+   A stage costs the better part of a minute on this hardware, and the same
+   presentation comes through the door more than once. So a finished stage can
+   be kept, and a later stage with the same inputs can be answered from the
+   record. Three things hold throughout:
+
+     - Nothing is written unless the clinician presses a button. There is no
+       default and no silent save.
+     - A recalled result says so, with its date and whether it was corrected.
+       A cached recommendation shown as a fresh one would invite a reader to
+       see corroboration in what is only repetition.
+     - The model is always one click away, whatever the store returned. */
+
+var STAGE_FIELDS = {
+  initial_with_followup: [
+    {key:"follow_up_questions",     label:"Follow-up questions",     type:"list"},
+    {key:"tentative_differentials", label:"Tentative differential",  type:"diff", sev:true},
+    {key:"red_flags",               label:"Red flags",               type:"list"},
+    {key:"clinical_rationale",      label:"Clinical rationale",      type:"text"}
+  ],
+  test_recommendation: [
+    {key:"recommended_tests",    label:"Recommended investigations", type:"list"},
+    {key:"working_differential", label:"Working differential",       type:"diff"},
+    {key:"rationale_for_tests",  label:"Rationale for investigation selection", type:"text"}
+  ],
+  advisory_conclusion: [
+    {key:"likely_diagnosis",       label:"Likely diagnosis",        type:"text"},
+    {key:"diagnostic_confidence",  label:"Diagnostic confidence",   type:"text"},
+    {key:"management_options",     label:"Management options",      type:"list"},
+    {key:"recommended_first_step", label:"Suggested first step",    type:"text"},
+    {key:"further_investigations_if_needed", label:"Further investigations if needed", type:"list"},
+    {key:"clinical_advisory_note", label:"Clinical advisory note",  type:"text"}
+  ]
+};
+
+function stageBody(stage, extra){
+  return {
+    stage: stage,
+    symptoms: $("symptoms").value.trim(),
+    duration: Number($("duration").value || 1),
+    age: $("age").value, sex: $("sex").value, extra: extra
+  };
+}
+
+function fieldToText(f, v){
+  if (f.type === "list") return (v || []).map(String).join("\n");
+  if (f.type === "diff"){
+    return (v || []).map(function(d){
+      var parts = [String(d.condition || ""), pct(d.probability) + "%"];
+      if (f.sev && d.severity) parts.push(String(d.severity));
+      return parts.join(" | ");
+    }).join("\n");
+  }
+  return v == null ? "" : String(v);
+}
+
+function textToField(f, t){
+  if (f.type === "text") return t.trim();
+  var lines = t.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
+  if (f.type === "list") return lines;
+  return lines.map(function(line){
+    var p = line.split("|").map(function(s){ return s.trim(); });
+    var num = parseFloat(String(p[1] || "").replace("%", ""));
+    if (isNaN(num)) num = 0;
+    var o = {condition: p[0] || "", probability: num > 1 ? num / 100 : num};
+    if (p[2]) o.severity = p[2];
+    return o;
   });
+}
+
+function clearKeep(n){
+  var kp = $("kp" + n); kp.className = ""; kp.innerHTML = "";
+  var rc = $("rc" + n); rc.className = ""; rc.innerHTML = "";
+}
+
+function bind(el, action, fn){
+  var b = el.querySelector('[data-a="' + action + '"]');
+  if (b) b.onclick = fn;
+}
+
+function keepBar(n, stage, extra, data){
+  var kp = $("kp" + n);
+  kp.className = "keep";
+  kp.innerHTML =
+    '<p class="kq">Keep this result? The same presentation can then be answered ' +
+    'from the record instead of running the model again.</p>' +
+    '<button class="primary" data-a="save">Save</button>' +
+    '<button data-a="edit">Edit, then save</button>' +
+    '<button class="plain" data-a="skip">Don\'t save</button>';
+  bind(kp, "save", function(){ saveCase(n, stage, extra, data, false, false); });
+  bind(kp, "edit", function(){ openEditor(n, stage, extra, data); });
+  bind(kp, "skip", function(){ kp.className = ""; kp.innerHTML = ""; });
+}
+
+function savedBar(n, j){
+  var kp = $("kp" + n);
+  kp.className = "keep done";
+  kp.innerHTML =
+    '<p class="kq">Saved on ' + esc(j.saved_on) +
+    (j.edited ? " as a clinician-corrected record" : "") +
+    '. A matching presentation will be offered this result instead of a new run.</p>' +
+    '<button class="plain" data-a="forget">Forget it</button>';
+  bind(kp, "forget", function(){ forgetCase(n, j.key); });
+  loadStatus();
+}
+
+function keepError(n, msg){
+  var kp = $("kp" + n);
+  kp.className = "keep warn";
+  kp.innerHTML = '<p class="kq">' + esc(msg) + "</p>";
+}
+
+/* The schema collects no identity, so the free-text boxes are the only way one
+   could reach the store. The clinician is told once and then decides — Aletheia
+   refuses hazards in code, but it does not overrule a clinician's own note. */
+function confirmBar(n, stage, extra, data, edited, warning){
+  var kp = $("kp" + n);
+  kp.className = "keep warn";
+  kp.innerHTML =
+    '<p class="kq">' + esc(warning) + "</p>" +
+    '<button class="primary" data-a="anyway">Save anyway</button>' +
+    '<button class="plain" data-a="back">Go back and edit</button>';
+  bind(kp, "anyway", function(){ saveCase(n, stage, extra, data, edited, true); });
+  bind(kp, "back", function(){ openEditor(n, stage, extra, data); });
+}
+
+function saveCase(n, stage, extra, data, edited, confirmed){
+  var kp = $("kp" + n);
+  kp.className = "keep";
+  kp.innerHTML = '<p class="kq">Saving...</p>';
+  var body = stageBody(stage, extra);
+  body.data = data;
+  body.edited = !!edited;
+  body.confirm = !!confirmed;
+  fetch("/api/recall/save", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body)
+  }).then(function(r){ return r.json(); }).then(function(j){
+    if (j && j.needs_confirmation){ confirmBar(n, stage, extra, data, edited, j.warning); return; }
+    if (j && j.ok){ savedBar(n, j); return; }
+    keepError(n, (j && (j.error || (j.refused && j.refused.message))) || "Could not save this case.");
+  }).catch(function(){
+    keepError(n, "Could not reach Aletheia to save this case.");
+  });
+}
+
+function forgetCase(n, key){
+  fetch("/api/recall/delete", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({key: key})
+  }).then(function(r){ return r.json(); }).then(function(){
+    var kp = $("kp" + n);
+    kp.className = "keep";
+    kp.innerHTML = '<p class="kq">Removed from the case store. The next matching ' +
+                   'presentation will run the model.</p>';
+    loadStatus();
+  }).catch(function(){
+    keepError(n, "Could not reach Aletheia to remove this case.");
+  });
+}
+
+/* Editing is where most of the clinical value sits. What is stored after a
+   correction is no longer a model output — it is a record a clinician read,
+   changed and signed off — and it is marked as such when it comes back. */
+function openEditor(n, stage, extra, data){
+  var fields = STAGE_FIELDS[stage] || [];
+  var kp = $("kp" + n);
+  kp.className = "";
+  var h = '<div class="editor"><h4>Correct this result before saving</h4>' +
+          '<p class="hint">One item per line. Differential lines are ' +
+          '<code>Condition | probability | severity</code>. What you save is a ' +
+          'record you have reviewed, and it is labelled that way when it is recalled.</p>';
+  fields.forEach(function(f, i){
+    h += '<label for="ed' + n + "_" + i + '">' + esc(f.label) + "</label>" +
+         '<textarea id="ed' + n + "_" + i + '">' + esc(fieldToText(f, data[f.key])) + "</textarea>";
+  });
+  h += '<div class="keep" style="margin-top:13px">' +
+       '<p class="kq">Save the corrected version?</p>' +
+       '<button class="primary" data-a="savee">Save corrections</button>' +
+       '<button class="plain" data-a="cancel">Cancel</button></div></div>';
+  kp.innerHTML = h;
+
+  bind(kp, "savee", function(){
+    var out = {};
+    Object.keys(data).forEach(function(k){ out[k] = data[k]; });   // keep anything not on screen
+    fields.forEach(function(f, i){ out[f.key] = textToField(f, $("ed" + n + "_" + i).value); });
+    renderStage(stage, out);
+    saveCase(n, stage, extra, out, true, false);
+  });
+  bind(kp, "cancel", function(){ keepBar(n, stage, extra, data); });
+}
+
+function showRecalled(n, stage, extra, j){
+  var c = j["case"] || {};
+  var rc = $("rc" + n);
+  rc.className = "recalled" + (c.stale ? " stale" : "");
+  rc.innerHTML =
+    '<span class="rtag">Recalled . not generated now</span>' +
+    "<p>" + esc(j.provenance) + "</p>" +
+    '<button data-a="run">Run the model anyway</button>';
+  bind(rc, "run", function(){
+    rc.className = ""; rc.innerHTML = "";
+    runFresh(n, stage, extra);
+  });
+
+  renderStage(stage, c.data || {});
+
+  var kp = $("kp" + n);
+  kp.className = "keep done";
+  kp.innerHTML = '<p class="kq">This came from the case store, so there is nothing to save.</p>' +
+                 '<button class="plain" data-a="forget">Forget this saved case</button>';
+  bind(kp, "forget", function(){ forgetCase(n, c.key); });
+
+  if (n < 3) unlock($("card" + (n + 1)), $("btn" + (n + 1)));
+}
+
+function runFresh(n, stage, extra){
+  clearKeep(n);
+  call(stage, extra, $("st" + n), $("lv" + n), $("rf" + n), $("btn" + n), function(d){
+    renderStage(stage, d);
+    keepBar(n, stage, extra, d);
+    if (n < 3) unlock($("card" + (n + 1)), $("btn" + (n + 1)));
+  });
+}
+
+/* Ask the store, then decide. The lookup is cheap and local; the model is not.
+   A store that is missing, corrupt or slow falls through to a normal run —
+   recall is an optimisation, and inference is the product. */
+function runStage(n, stage, extra){
+  var st = $("st" + n), btn = $("btn" + n);
+  clearKeep(n);
+  $("rf" + n).innerHTML = "";
+  if (!$("symptoms").value.trim()){
+    status(st, "err", "Enter at least one symptom.");
+    return;
+  }
+
+  var settled = false;
+  function fallThrough(){
+    if (settled) return;
+    settled = true;
+    btn.disabled = false;
+    runFresh(n, stage, extra);
+  }
+
+  btn.disabled = true;
+  status(st, "run", "Checking saved cases...");
+  fetch("/api/recall/lookup", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(stageBody(stage, extra))
+  }).then(function(r){ return r.json(); }).then(function(j){
+    if (settled) return;
+    if (j && j.refused){
+      settled = true;
+      btn.disabled = false;
+      status(st, "ok", "");
+      showRefusal($("rf" + n), j.refused);
+      return;
+    }
+    if (j && j.ok && j.hit){
+      settled = true;
+      btn.disabled = false;
+      status(st, "ok", "");
+      showRecalled(n, stage, extra, j);
+      return;
+    }
+    fallThrough();
+  }).catch(fallThrough);
+}
+
+$("btn1").onclick = function(){
+  runStage(1, "initial_with_followup", "");
 };
 
 $("btn2").onclick = function(){
   var a = $("answers").value.trim();
   if (!a){ status($("st2"), "err", "Answer the follow-up questions first."); return; }
-  call("test_recommendation", a, $("st2"), $("lv2"), $("rf2"), $("btn2"), function(d){
-    setPanel($("out2a"), listHTML(first(d, ["recommended_tests","priority_tests","investigations"])),
-             "No investigations returned.");
-    setPanel($("out2b"), diffTable(first(d, ["working_differential","tentative_differentials","differentials"]), false),
-             "No working differential returned.");
-    var rat = first(d, ["rationale_for_tests","clinical_rationale","reasoning"]);
-    setPanel($("out2c"), rat ? esc(rat) : null, "No rationale returned.");
-    unlock($("card3"), $("btn3"));
-  });
+  runStage(2, "test_recommendation", a);
 };
 
 $("btn3").onclick = function(){
   var r = $("results").value.trim();
   if (!r){ status($("st3"), "err", "Enter the investigation results first."); return; }
-  call("advisory_conclusion", r, $("st3"), $("lv3"), $("rf3"), $("btn3"), function(d){
-    var dx = first(d, ["likely_diagnosis","final_diagnosis","diagnosis"]);
-    var conf = d.diagnostic_confidence || "";
-    var opts = first(d, ["management_options","management","treatment"]);
-    var step = d.recommended_first_step || "";
-    var more = first(d, ["further_investigations_if_needed"]);
-    var note = d.clinical_advisory_note || "";
-    if (!dx && !opts && !step){
-      setPanel($("out3a"), null, "No advisory returned. Check the model output.");
-      return;
-    }
-    var h = "";
-    if (dx) h += '<p class="ptitle">Likely diagnosis</p><p>' + esc(dx) +
-                 (conf ? ' <span class="sev High">confidence: ' + esc(conf) + "</span>" : "") + "</p>";
-    if (opts) h += '<p class="ptitle">Management options for your consideration</p>' + listHTML(opts);
-    if (step) h += '<p class="ptitle">Suggested first step</p><p>' + esc(step) + "</p>";
-    if (more) h += '<p class="ptitle">Further investigations if needed</p>' + listHTML(more);
-    h += '<div class="advisory-note">' +
-         esc(note || "The treating clinician retains full authority over all management decisions.") +
-         "</div>";
-    setPanel($("out3a"), h, "");
-  });
+  runStage(3, "advisory_conclusion", r);
 };
 </script>
 </body>
