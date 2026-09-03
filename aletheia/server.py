@@ -7,15 +7,31 @@ Aletheia - custom web front end.
 Serves a single self-contained page and a small JSON API over Python's standard
 library HTTP server. There is no web framework and no external asset: the page
 carries its own CSS and JavaScript, so the interface loads instantly and works
-with no internet connection.
+with no internet connection. Nothing here imports anything that is not in the
+standard library, which is the point — a laptop that has finished installing
+Aletheia never needs pip again.
 
 Inference itself is unchanged. Every stage goes through the same
-inference.aletheia.run_inference() used by the CLIs, so response times are
-identical to running run.py directly. A lock serialises inference so two
-requests never fight over the same CPU cores.
+inference.aletheia code path used by the CLIs, so response times are identical
+to running run.py directly. A lock serialises inference so two requests never
+fight over the same CPU cores.
+
+Three routes matter:
+
+  GET  /api/status        what is actually loaded on this machine — model file,
+                          size, threads — so the "runs offline on device" claim
+                          is visible rather than asserted.
+  POST /api/stage/stream  server-sent events: refused | token | result | error.
+                          A stage takes 40-60 s; streaming means the reader sees
+                          the answer being written instead of a still spinner.
+  POST /api/stage         the original blocking JSON call, kept for scripts.
+
+Binding: 127.0.0.1 by default. This tool handles patient presentations, so it
+is not exposed to the ward LAN unless someone deliberately sets ALETHEIA_HOST.
 """
 
 import json
+import os
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,11 +39,22 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from inference.aletheia import build_prompt, parse_response, run_inference
+from inference.aletheia import (
+    build_prompt,
+    parse_response,
+    run_inference,
+    runtime_info,
+    stream_inference,
+)
+from inference.safety import HAZARD_CLASSES, HazardRefusal, screen
 
 UI_FILE = Path(__file__).resolve().parent / "ui" / "index.html"
-HOST = "0.0.0.0"
-PORT = 7860
+
+# Loopback only. Set ALETHEIA_HOST=0.0.0.0 to reach the console from another
+# machine on the same network, and understand that this puts patient
+# presentations on that network before you do.
+HOST = os.environ.get("ALETHEIA_HOST", "127.0.0.1")
+PORT = int(os.environ.get("ALETHEIA_PORT", "7860"))
 
 VALID_STAGES = {
     "initial_with_followup",
@@ -44,18 +71,29 @@ STAGE_NEEDS_EXTRA = {
 _inference_lock = threading.Lock()
 
 
-def run_stage(payload: dict) -> dict:
+def prepare(payload: dict) -> tuple[str, str, int]:
+    """Validate a request and turn it into (stage, prompt, timeout).
+
+    Raises ValueError for bad input and HazardRefusal for a refused one, both
+    before any subprocess is started.
+    """
     stage = payload.get("stage", "initial_with_followup")
     if stage not in VALID_STAGES:
         raise ValueError(f"Unknown stage: {stage}")
 
-    symptoms = [s.strip().lower() for s in payload.get("symptoms", "").split(",") if s.strip()]
+    raw_symptoms = payload.get("symptoms", "")
+    symptoms = [s.strip().lower() for s in raw_symptoms.split(",") if s.strip()]
     if not symptoms:
         raise ValueError("Enter at least one symptom.")
 
     extra = (payload.get("extra") or "").strip()
     if stage in STAGE_NEEDS_EXTRA and not extra:
         raise ValueError(f"This stage needs {STAGE_NEEDS_EXTRA[stage]}.")
+
+    # Screened on the text as typed, before the prompt exists.
+    refusal = screen(raw_symptoms, extra)
+    if refusal is not None:
+        raise HazardRefusal(refusal)
 
     prompt = build_prompt(
         symptoms=symptoms,
@@ -65,10 +103,14 @@ def run_stage(payload: dict) -> dict:
         reasoning_type=stage,
         extra=extra,
     )
+    return stage, prompt, int(payload.get("timeout", 600))
 
+
+def run_stage(payload: dict) -> dict:
+    """Blocking single-shot stage, kept for scripts and for /api/stage."""
+    stage, prompt, timeout = prepare(payload)
     with _inference_lock:
-        raw, elapsed = run_inference(prompt, timeout=int(payload.get("timeout", 600)))
-
+        raw, elapsed = run_inference(prompt, timeout=timeout)
     return {"ok": True, "stage": stage, "elapsed": elapsed,
             "data": parse_response(raw), "raw": raw}
 
@@ -87,47 +129,173 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_json(self, code, obj):
+        self._send(code, json.dumps(obj).encode("utf-8"), "application/json")
+
+    # ---- server-sent events -------------------------------------------------
+    # HTTP/1.1 needs a framing the client can follow when the body length is not
+    # known up front, so the event stream is written as chunked transfer
+    # encoding by hand. No framework, no dependency.
+
+    def _open_stream(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Transfer-Encoding", "chunked")
+        self.end_headers()
+
+    def _event(self, name: str, data: dict) -> bool:
+        """Write one SSE event. Returns False once the browser has gone away."""
+        frame = f"event: {name}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+        body = frame.encode("utf-8")
+        try:
+            self.wfile.write(f"{len(body):X}\r\n".encode("ascii") + body + b"\r\n")
+            self.wfile.flush()
+            return True
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            return False
+
+    def _close_stream(self):
+        try:
+            self.wfile.write(b"0\r\n\r\n")
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            pass
+
+    # ---- routes -------------------------------------------------------------
+
     def do_GET(self):
-        if self.path.split("?")[0] in ("/", "/index.html"):
+        path = self.path.split("?")[0]
+        if path in ("/", "/index.html"):
             try:
                 body = UI_FILE.read_bytes()
             except FileNotFoundError:
                 self._send(500, b"UI file missing: " + str(UI_FILE).encode(), "text/plain")
                 return
             self._send(200, body, "text/html; charset=utf-8")
-        elif self.path == "/api/health":
+        elif path == "/api/health":
             self._send(200, b'{"ok":true}', "application/json")
+        elif path == "/api/status":
+            info = runtime_info()
+            info.update({
+                "ok": True,
+                "ready": info["model_present"] and info["runner_present"],
+                # Aletheia opens no outbound socket at any point. This is a
+                # property of the code, not a probe result.
+                "offline": True,
+                "busy": _inference_lock.locked(),
+                "hazard_classes": list(HAZARD_CLASSES),
+            })
+            self._send_json(200, info)
         else:
             self._send(404, b"Not found", "text/plain")
 
+    def _read_payload(self):
+        length = int(self.headers.get("Content-Length", 0))
+        return json.loads(self.rfile.read(length) or b"{}")
+
     def do_POST(self):
-        if self.path != "/api/stage":
+        path = self.path.split("?")[0]
+        if path == "/api/stage":
+            self._post_stage()
+        elif path == "/api/stage/stream":
+            self._post_stage_stream()
+        else:
             self._send(404, b"Not found", "text/plain")
-            return
+
+    def _post_stage(self):
         try:
-            length = int(self.headers.get("Content-Length", 0))
-            payload = json.loads(self.rfile.read(length) or b"{}")
+            payload = self._read_payload()
         except Exception:
-            self._send(400, b'{"ok":false,"error":"Malformed request."}', "application/json")
+            self._send_json(400, {"ok": False, "error": "Malformed request."})
             return
 
         try:
-            result = run_stage(payload)
-            code = 200
+            self._send_json(200, run_stage(payload))
+        except HazardRefusal as exc:
+            self._send_json(200, {"ok": False, "refused": exc.refusal.to_dict()})
         except ValueError as exc:
-            result, code = {"ok": False, "error": str(exc)}, 400
+            self._send_json(400, {"ok": False, "error": str(exc)})
         except FileNotFoundError as exc:
-            result, code = {"ok": False, "error": str(exc)}, 500
+            self._send_json(500, {"ok": False, "error": str(exc)})
         except Exception as exc:
-            result, code = {"ok": False, "error": f"Inference failed: {exc}"}, 500
+            self._send_json(500, {"ok": False, "error": f"Inference failed: {exc}"})
 
-        self._send(code, json.dumps(result).encode("utf-8"), "application/json")
+    def _post_stage_stream(self):
+        try:
+            payload = self._read_payload()
+        except Exception:
+            self._send_json(400, {"ok": False, "error": "Malformed request."})
+            return
+
+        try:
+            stage, prompt, timeout = prepare(payload)
+        except HazardRefusal as exc:
+            # A refusal is a normal, expected outcome, not an error: it opens
+            # the stream and says so, so the console renders it the same way it
+            # renders an answer.
+            self._open_stream()
+            self._event("refused", exc.refusal.to_dict())
+            self._close_stream()
+            return
+        except ValueError as exc:
+            self._send_json(400, {"ok": False, "error": str(exc)})
+            return
+        except FileNotFoundError as exc:
+            self._send_json(500, {"ok": False, "error": str(exc)})
+            return
+
+        self._open_stream()
+
+        # Someone else's stage may still be running. Say so rather than leaving
+        # the reader looking at a stream that has gone quiet.
+        if not _inference_lock.acquire(blocking=False):
+            if not self._event("queued", {"message": "Another stage is running. Queued."}):
+                return
+            _inference_lock.acquire()
+
+        try:
+            stream = stream_inference(prompt, timeout=timeout)
+            try:
+                for kind, item in stream:
+                    if kind == "token":
+                        if not self._event("token", {"t": item}):
+                            return        # browser closed; finally kills llama.cpp
+                    else:
+                        self._event("result", {
+                            "stage": stage,
+                            "elapsed": item["elapsed"],
+                            "tokens": item["tokens"],
+                            "tokens_per_second": item["tokens_per_second"],
+                            "measured": item["measured"],
+                            "data": parse_response(item["text"]),
+                            "raw": item["text"],
+                        })
+            finally:
+                stream.close()
+        except TimeoutError as exc:
+            self._event("error", {"message": str(exc)})
+        except FileNotFoundError as exc:
+            self._event("error", {"message": str(exc)})
+        except Exception as exc:
+            self._event("error", {"message": f"Inference failed: {exc}"})
+        finally:
+            _inference_lock.release()
+            self._close_stream()
 
 
 def main():
     server = ThreadingHTTPServer((HOST, PORT), Handler)
+    shown = "localhost" if HOST in ("127.0.0.1", "0.0.0.0") else HOST
+    info = runtime_info()
     print("\nAletheia is running.")
-    print(f"Open http://localhost:{PORT} in your browser.")
+    print(f"Open http://{shown}:{PORT} in your browser.")
+    if not info["model_present"]:
+        print("Warning: model file not found. Run: bash download_model.sh")
+    if not info["runner_present"]:
+        print("Warning: llama.cpp binary not found. Run: bash install.sh")
+    if HOST == "0.0.0.0":
+        print("Warning: bound to 0.0.0.0 — reachable from the whole network.")
     print("Press Ctrl+C to stop.\n")
     try:
         server.serve_forever()

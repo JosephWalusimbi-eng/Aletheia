@@ -551,9 +551,9 @@ The model path in `config.json` is wrong. Verify:
 
 ### "Address already in use"
 
-Another process is using port 7860. Either stop it, or change the port in `aletheia/server.py`:
-```python
-server_port=7861,   # change to any free port
+Another process is using port 7860. Either stop it, or pick a different port:
+```bash
+ALETHEIA_PORT=7861 python3 aletheia/server.py
 ```
 
 ### "ModuleNotFoundError: No module named 'rich'"

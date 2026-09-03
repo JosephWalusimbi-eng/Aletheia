@@ -6,7 +6,9 @@
 <title>Aletheia - Clinical Decision Support</title>
 <style>
 /* Jade and white. The palette is fixed rather than following the operating system
-   theme, so the interface looks the same on every machine it is demonstrated on. */
+   theme, so the interface looks the same on every machine it is demonstrated on.
+   No web fonts, no external asset of any kind: the page is one file that loads
+   instantly on a machine that has never been online. */
 :root{
   --bg:#f2f8f5; --surface:#ffffff; --surface-2:#f0f7f3; --line:#d5e7de;
   --text:#12211b; --muted:#5a6e65;
@@ -15,6 +17,7 @@
   --warn:#b45309; --warn-bg:#fff8e6;
   --danger:#b42318; --danger-bg:#fdf1f0;
   --shadow:0 1px 2px rgba(4,81,60,.06),0 1px 3px rgba(4,81,60,.10);
+  --mono:ui-monospace,SFMono-Regular,"Cascadia Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
 body{
@@ -26,6 +29,7 @@ body{
 header.top{
   background:linear-gradient(135deg,var(--jade-deep),var(--jade-dark),var(--jade));
   border-radius:14px;padding:22px 24px;margin-bottom:18px;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;
 }
 header.top h1{margin:0;font-size:1.5rem;color:#ffffff;letter-spacing:-.01em}
 header.top p{margin:6px 0 0;color:#d6f2e6;font-size:.9rem}
@@ -34,6 +38,33 @@ header.top p{margin:6px 0 0;color:#d6f2e6;font-size:.9rem}
   font-size:.75rem;font-weight:600;background:rgba(255,255,255,.16);
   border:1px solid rgba(255,255,255,.45);color:#ffffff;
 }
+
+/* The runtime rail. "Fully offline" is a claim; this is the evidence for it —
+   the model file that is actually loaded, its size on disk, and the thread
+   count, read from this machine. Anyone can check the numbers against the
+   file. */
+.runtime{
+  flex:none;text-align:right;font-family:var(--mono);font-size:.72rem;
+  line-height:1.75;color:#bde8d4;max-width:270px;
+}
+.runtime .ready{
+  display:flex;align-items:center;justify-content:flex-end;gap:7px;
+  color:#ffffff;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;
+}
+.runtime .sdot{
+  width:8px;height:8px;border-radius:50%;background:#f2c063;flex:none;
+  animation:pulse 1.6s ease-in-out infinite;
+}
+.runtime .sdot.on{background:#7ff0bb;animation:none}
+.runtime .sdot.off{background:#ff9b8f;animation:none}
+.runtime b{color:#ffffff;font-weight:600;word-break:break-all}
+@keyframes pulse{50%{opacity:.35}}
+@media(max-width:700px){
+  header.top{flex-direction:column}
+  .runtime{text-align:left;max-width:none}
+  .runtime .ready{justify-content:flex-start}
+}
+
 .notice{
   background:var(--warn-bg);border-left:4px solid var(--warn);
   padding:10px 14px;border-radius:8px;font-size:.85rem;margin-bottom:18px;color:var(--text);
@@ -111,10 +142,40 @@ ul.flags li::before{content:"!";position:absolute;left:6px}
 .status{display:flex;align-items:center;gap:9px;margin-top:11px;font-size:.86rem;color:var(--muted)}
 .spin{
   width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);
-  border-radius:50%;animation:sp .8s linear infinite;
+  border-radius:50%;animation:sp .8s linear infinite;flex:none;
 }
 @keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){
+  .spin{animation:none;border-top-color:var(--line);background:var(--accent);
+        border-radius:50%;width:9px;height:9px;border-width:0;margin:2px}
+  .runtime .sdot{animation:none}
+}
 .err{color:var(--danger);font-weight:600}
+
+/* The model writes at 5 to 7 tokens a second, so a stage takes the better part
+   of a minute. This is that minute made legible: the text appears as it is
+   generated, and is replaced by the parsed panels the moment the stage ends.
+   It is decoration for a screen reader, though, so it is hidden from one — the
+   status line above it carries the same information as a sentence. */
+.live{
+  margin-top:11px;background:#0d1f18;color:#c7e9d8;border-radius:10px;
+  padding:11px 13px;font-family:var(--mono);font-size:.78rem;line-height:1.5;
+  max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+}
+.live:empty{display:none}
+
+.refusal{
+  border:1px solid var(--danger);border-left-width:4px;background:var(--danger-bg);
+  border-radius:10px;padding:13px 15px;margin-top:14px;
+}
+.refusal .rtag{
+  display:inline-block;font-family:var(--mono);font-size:.68rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--danger);
+  border:1px solid var(--danger);border-radius:4px;padding:2px 7px;margin-bottom:9px;
+}
+.refusal p{margin:0 0 8px}
+.refusal .guide{margin:0;color:var(--muted);font-size:.88rem}
+
 .handoff{
   background:var(--surface-2);border:1px solid var(--accent);border-left-width:4px;
   border-radius:9px;padding:11px 15px;margin-top:14px;font-size:.88rem;
@@ -125,15 +186,23 @@ ul.flags li::before{content:"!";position:absolute;left:6px}
 }
 footer{text-align:center;color:var(--muted);font-size:.8rem;padding:18px;
   border-top:1px solid var(--line);margin-top:8px}
+footer .hz{font-family:var(--mono);font-size:.74rem;display:block;margin-top:5px}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header class="top">
-  <h1>Aletheia Diagnostic AI</h1>
-  <p>Offline clinical decision support for district hospitals in sub-Saharan Africa</p>
-  <span class="pill">Fully offline. No internet required.</span>
+  <div>
+    <h1>Aletheia Diagnostic AI</h1>
+    <p>Offline clinical decision support for district hospitals in sub-Saharan Africa</p>
+    <span class="pill">Fully offline. No internet required.</span>
+  </div>
+  <div class="runtime" id="runtime">
+    <div class="ready"><span class="sdot" id="sdot"></span><span id="sready">checking</span></div>
+    <div id="smodel">reading local runtime...</div>
+    <div id="smeta"></div>
+  </div>
 </header>
 
 <div class="notice">
@@ -176,7 +245,9 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:18px;
   <h2>Assess presentation and generate follow-up questions</h2>
   <p class="sub">No investigations are suggested yet. Tests come after the follow-up answers.</p>
   <button class="run" id="btn1">Run Step 1: Assess symptoms</button>
-  <div class="status" id="st1"></div>
+  <div class="status" id="st1" role="status" aria-live="polite"></div>
+  <pre class="live" id="lv1" aria-hidden="true"></pre>
+  <div id="rf1"></div>
   <div class="grid" style="margin-top:14px">
     <div>
       <p class="ptitle">Follow-up questions <span>(answer all before Step 2)</span></p>
@@ -209,7 +280,9 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:18px;
     <textarea id="answers" placeholder="e.g. Kernig sign positive, no rash, vaccinated, no TB contacts"></textarea>
   </div>
   <button class="run" id="btn2" disabled>Run Step 2: Get investigation recommendations</button>
-  <div class="status" id="st2"></div>
+  <div class="status" id="st2" role="status" aria-live="polite"></div>
+  <pre class="live" id="lv2" aria-hidden="true"></pre>
+  <div id="rf2"></div>
   <div class="grid" style="margin-top:14px">
     <div>
       <p class="ptitle">Recommended investigations <span>(perform before Step 3)</span></p>
@@ -238,14 +311,19 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:18px;
     <textarea id="results" placeholder="e.g. CSF cloudy, WBC 2000 cells/uL (90% neutrophils), protein high, glucose low. Malaria RDT negative."></textarea>
   </div>
   <button class="run" id="btn3" disabled>Run Step 3: Get clinical advisory</button>
-  <div class="status" id="st3"></div>
+  <div class="status" id="st3" role="status" aria-live="polite"></div>
+  <pre class="live" id="lv3" aria-hidden="true"></pre>
+  <div id="rf3"></div>
   <div style="margin-top:14px">
     <p class="ptitle">Clinical advisory</p>
     <div class="panel" id="out3a"><span class="empty">Complete Steps 1 and 2 first.</span></div>
   </div>
 </section>
 
-<footer>Aletheia . Soroti University, Uganda . ADTC 2026</footer>
+<footer>
+  Aletheia . Soroti University, Uganda . ADTC 2026
+  <span class="hz" id="hazards"></span>
+</footer>
 </div>
 
 <script>
@@ -276,6 +354,40 @@ EXAMPLES.forEach(function(ex){
   };
   $("chips").appendChild(b);
 });
+
+/* ---- runtime rail -------------------------------------------------------
+   Reads /api/status once at load. What it prints is read off this machine:
+   the GGUF that is actually configured, its size on disk, the thread count.
+   If the model or the llama.cpp binary is missing, this is where you find
+   out — before spending a minute waiting for a stage that cannot run. */
+function loadStatus(){
+  fetch("/api/status").then(function(r){ return r.json(); }).then(function(s){
+    var dot = $("sdot");
+    dot.className = "sdot " + (s.ready ? "on" : "off");
+    $("sready").textContent = s.ready ? "Ready . on device" : "Not ready";
+    $("smodel").innerHTML = "<b>" + esc(s.model_name) + "</b>";
+    if (s.ready){
+      $("smeta").textContent =
+        s.model_size_mb.toLocaleString("en") + " MB on disk . " +
+        s.threads + " threads . CPU only";
+    } else {
+      $("smeta").innerHTML = '<span style="color:#ffd9d3">' +
+        esc(!s.model_present ? "Model file missing - run download_model.sh"
+                             : "llama.cpp not found - run install.sh") + "</span>";
+    }
+    if (s.hazard_classes && s.hazard_classes.length){
+      $("hazards").textContent =
+        s.hazard_classes.length + " classes of dangerous request are refused in code, " +
+        "before the model runs";
+    }
+  }).catch(function(){
+    $("sdot").className = "sdot off";
+    $("sready").textContent = "No server";
+    $("smodel").textContent = "Could not reach Aletheia.";
+    $("smeta").textContent = "";
+  });
+}
+loadStatus();
 
 function pct(p){ var n = Number(p) || 0; return Math.round(n <= 1 ? n * 100 : n); }
 
@@ -322,39 +434,147 @@ function unlock(card, btn){
   btn.disabled = false;
 }
 
-function call(stage, extra, statusEl, btn, onDone){
+/* A refusal is an answer, not a failure: it is shown in place of the output,
+   it says which class was tripped, and it says what to do instead. */
+function showRefusal(el, r){
+  el.innerHTML =
+    '<div class="refusal">' +
+      '<span class="rtag">Refused in code . ' + esc(r.label) + "</span>" +
+      "<p>" + esc(r.message) + "</p>" +
+      '<p class="guide">' + esc(r.guidance) + "</p>" +
+    "</div>";
+}
+
+/* ---- one stage over server-sent events ---------------------------------
+   The server streams: refused | token | result | error. Tokens land in the
+   live panel as they arrive, so the 40-to-60-second wait shows the answer
+   being written rather than a spinner that could equally mean a hang. */
+var CHARS_PER_TOKEN = 4;   // rough, for the live rate only; the final figure
+                           // in the status line is llama.cpp's own measurement
+
+function call(stage, extra, statusEl, liveEl, refuseEl, btn, onDone){
   var symptoms = $("symptoms").value.trim();
   if (!symptoms){ status(statusEl, "err", "Enter at least one symptom."); return; }
 
   btn.disabled = true;
-  var t0 = Date.now();
-  var tick = setInterval(function(){
-    status(statusEl, "run", "Running on local CPU, " + Math.round((Date.now() - t0) / 1000) + "s elapsed");
-  }, 250);
+  liveEl.textContent = "";
+  refuseEl.innerHTML = "";
 
-  fetch("/api/stage", {
+  var t0 = Date.now(), chars = 0, queued = false, settled = false;
+
+  function secs(){ return (Date.now() - t0) / 1000; }
+  function tick(){
+    if (settled) return;
+    var s = secs();
+    var msg = queued ? "Queued behind another stage, " + Math.round(s) + "s elapsed"
+                     : "Generating on local CPU, " + Math.round(s) + "s elapsed";
+    if (!queued && chars > 0 && s > 2){
+      msg += ", ~" + (chars / CHARS_PER_TOKEN / s).toFixed(1) + " tok/s";
+    }
+    status(statusEl, "run", msg);
+  }
+  var timer = setInterval(tick, 250);
+  tick();
+
+  function finish(){ settled = true; clearInterval(timer); btn.disabled = false; }
+
+  function fail(msg){
+    if (settled) return;
+    finish();
+    status(statusEl, "err", msg);
+  }
+
+  var body = JSON.stringify({
+    stage: stage, symptoms: symptoms,
+    duration: Number($("duration").value || 1),
+    age: $("age").value, sex: $("sex").value, extra: extra
+  });
+
+  function handle(name, data){
+    if (name === "queued"){ queued = true; return; }
+    if (name === "token"){
+      queued = false;
+      chars += data.t.length;
+      liveEl.textContent += data.t;
+      liveEl.scrollTop = liveEl.scrollHeight;
+      return;
+    }
+    if (name === "refused"){
+      finish();
+      status(statusEl, "ok", "");
+      liveEl.textContent = "";
+      showRefusal(refuseEl, data);
+      return;
+    }
+    if (name === "error"){ fail(data.message || "Inference failed."); return; }
+    if (name === "result"){
+      finish();
+      var note = "Completed in " + data.elapsed + "s";
+      if (data.measured){
+        note += ", " + data.tokens + " tokens, " + data.tokens_per_second + " tok/s";
+      }
+      status(statusEl, "ok", note);
+      liveEl.textContent = "";
+      onDone(data.data || {});
+    }
+  }
+
+  fetch("/api/stage/stream", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      stage: stage, symptoms: symptoms,
-      duration: Number($("duration").value || 1),
-      age: $("age").value, sex: $("sex").value, extra: extra
-    })
-  }).then(function(res){ return res.json(); }).then(function(j){
-    clearInterval(tick);
-    btn.disabled = false;
-    if (!j.ok){ status(statusEl, "err", j.error || "Request failed."); return; }
-    status(statusEl, "ok", "Completed in " + j.elapsed + "s");
-    onDone(j.data || {});
+    body: body
+  }).then(function(res){
+    if (!res.ok){
+      return res.json().then(function(j){ fail(j.error || "Request failed."); })
+                       .catch(function(){ fail("Request failed."); });
+    }
+    // Older browsers have fetch but no streaming body. Fall back to the
+    // blocking route rather than showing nothing at all.
+    if (!res.body || !res.body.getReader) return blockingFallback();
+
+    var reader = res.body.getReader(), decoder = new TextDecoder(), buf = "";
+    function pump(){
+      return reader.read().then(function(chunk){
+        if (chunk.done){
+          if (!settled) fail("The connection closed before the stage finished.");
+          return;
+        }
+        buf += decoder.decode(chunk.value, {stream: true});
+        var frames = buf.split("\n\n");
+        buf = frames.pop();
+        frames.forEach(function(frame){
+          var name = null, payload = null;
+          frame.split("\n").forEach(function(line){
+            if (line.indexOf("event: ") === 0) name = line.slice(7);
+            else if (line.indexOf("data: ") === 0){
+              try { payload = JSON.parse(line.slice(6)); } catch (e) { payload = null; }
+            }
+          });
+          if (name && payload) handle(name, payload);
+        });
+        return pump();
+      });
+    }
+    return pump();
   }).catch(function(){
-    clearInterval(tick);
-    btn.disabled = false;
-    status(statusEl, "err", "Could not reach Aletheia. Is the server still running?");
+    fail("Could not reach Aletheia. Is the server still running?");
   });
+
+  function blockingFallback(){
+    return fetch("/api/stage", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: body
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if (j.refused) return handle("refused", j.refused);
+      if (!j.ok) return fail(j.error || "Request failed.");
+      handle("result", {elapsed: j.elapsed, measured: false, data: j.data});
+    });
+  }
 }
 
 $("btn1").onclick = function(){
-  call("initial_with_followup", "", $("st1"), $("btn1"), function(d){
+  call("initial_with_followup", "", $("st1"), $("lv1"), $("rf1"), $("btn1"), function(d){
     setPanel($("out1a"), listHTML(first(d, ["follow_up_questions","follow_up","questions"])),
              "No follow-up questions were returned.");
     setPanel($("out1b"), diffTable(first(d, ["tentative_differentials","ranked_differentials","differentials"]), true),
@@ -372,7 +592,7 @@ $("btn1").onclick = function(){
 $("btn2").onclick = function(){
   var a = $("answers").value.trim();
   if (!a){ status($("st2"), "err", "Answer the follow-up questions first."); return; }
-  call("test_recommendation", a, $("st2"), $("btn2"), function(d){
+  call("test_recommendation", a, $("st2"), $("lv2"), $("rf2"), $("btn2"), function(d){
     setPanel($("out2a"), listHTML(first(d, ["recommended_tests","priority_tests","investigations"])),
              "No investigations returned.");
     setPanel($("out2b"), diffTable(first(d, ["working_differential","tentative_differentials","differentials"]), false),
@@ -386,7 +606,7 @@ $("btn2").onclick = function(){
 $("btn3").onclick = function(){
   var r = $("results").value.trim();
   if (!r){ status($("st3"), "err", "Enter the investigation results first."); return; }
-  call("advisory_conclusion", r, $("st3"), $("btn3"), function(d){
+  call("advisory_conclusion", r, $("st3"), $("lv3"), $("rf3"), $("btn3"), function(d){
     var dx = first(d, ["likely_diagnosis","final_diagnosis","diagnosis"]);
     var conf = d.diagnostic_confidence || "";
     var opts = first(d, ["management_options","management","treatment"]);

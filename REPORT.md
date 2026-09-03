@@ -79,7 +79,7 @@ once per deployment.
 ### Interfaces
 
 Three interfaces share a single inference layer (`inference/aletheia.py`):
-- **Web UI** (`aletheia/server.py` + `aletheia/ui/index.html`) - served by Python's standard library, enforces stage ordering via disabled buttons
+- **Web UI** (`aletheia/server.py` + `aletheia/ui/index.html`) - served by Python's standard library, enforces stage ordering via disabled buttons; streams generated text over server-sent events so a 40-60 s stage shows progress, and displays the loaded model, its size and the thread count read from the machine. Binds 127.0.0.1 by default
 - **Terminal CLI** (`cli.py`) - sequential, requires non-empty input at each stage gate
 - **Single-stage CLI** (`run.py`) - for scripting and profiler integration; accepts `--stage` and `--extra` arguments
 

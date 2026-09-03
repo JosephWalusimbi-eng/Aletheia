@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from inference.aletheia import diagnose
+from inference.safety import HazardRefusal
 
 STAGES = [
     "initial_with_followup",
@@ -142,6 +143,14 @@ The --extra flag carries the context each stage needs:
             extra=args.extra,
             timeout=args.timeout,
         )
+    except HazardRefusal as exc:
+        # Refused in code before the model ran. Exit 2, so a script can tell a
+        # refusal apart from a crash.
+        r = exc.refusal
+        print(f"\nREFUSED IN CODE - {r.label}", file=sys.stderr)
+        print(f"  {r.message}", file=sys.stderr)
+        print(f"  {r.guidance}", file=sys.stderr)
+        sys.exit(2)
     except FileNotFoundError as e:
         print(f"\nError: {e}", file=sys.stderr)
         sys.exit(1)

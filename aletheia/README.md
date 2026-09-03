@@ -142,13 +142,22 @@ python3 aletheia/server.py
 
 Either way the interface is at **http://localhost:7860**.
 
+The server listens on `127.0.0.1` only — this laptop, nothing else on the network.
+Patient presentations are typed into this page, so publishing it to the ward LAN is
+a deliberate act, not a default:
+
+```bash
+ALETHEIA_HOST=0.0.0.0 python3 aletheia/server.py   # reachable from the whole LAN
+ALETHEIA_PORT=8080     python3 aletheia/server.py   # different port
+```
+
 **What the web UI looks like:**
 
 ```
 +-----------------------------------------------------------------+
-|  Aletheia Diagnostic AI                                         |
-|  Offline clinical decision support for district hospitals       |
-|  Fully offline. No internet required.                           |
+|  Aletheia Diagnostic AI          * READY . ON DEVICE            |
+|  Offline clinical decision...      aletheia_q4km.gguf           |
+|  Fully offline. No internet.       1,800 MB . 4 threads . CPU   |
 +-----------------------------------------------------------------+
 |  Advisory only. Aletheia does not diagnose and does not         |
 |  prescribe. The treating clinician decides.                     |
@@ -162,6 +171,10 @@ Either way the interface is at **http://localhost:7860**.
 +-----------------------------------------------------------------+
 |  STEP 1  Assess presentation and generate follow-up questions   |
 |  [        Run Step 1: Assess symptoms                        ]  |
+|  (o) Generating on local CPU, 23s elapsed, ~6.1 tok/s           |
+|  +-- live output, streaming ----------------------------------+ |
+|  | {"tentative_differentials": [{"condition": "Cerebral mala  | |
+|  +-------------------------------------------------------------+ |
 |  Follow-up questions (answer all)  |  Tentative differential    |
 |  Red flags                         |  Clinical rationale        |
 +-----------------------------------------------------------------+
@@ -204,9 +217,25 @@ completes, so the stages cannot be skipped.
 fill them in with one click (meningitis, cerebral malaria, pulmonary TB, eclampsia,
 postpartum haemorrhage, severe malnutrition, snake envenomation).
 
-> Each stage takes roughly 40 to 60 seconds on an i5-class CPU. A live counter shows
-> the elapsed seconds while the model is working, and the button is disabled until it
-> finishes. This is expected, not a hang.
+**The answer streams while it is written.** Each stage takes roughly 40 to 60 seconds
+on an i5-class CPU, so the model's output appears in a live panel as it is generated,
+above the status line showing elapsed seconds and a running rate. When the stage
+finishes the live panel clears, the parsed panels fill in, and the status line
+reports llama.cpp's own measured figure — `Completed in 47.2s, 122 tokens,
+5.67 tok/s`. The rate shown *during* generation is an estimate from output length and
+is marked with a `~`; the one shown at the end is measured.
+
+**The header shows what is actually loaded.** Model filename, size on disk, thread
+count, CPU only, read from this machine at page load. If the GGUF or the llama.cpp
+binary is missing, the rail says so immediately instead of letting you wait a minute
+for a stage that cannot run.
+
+**Some requests are refused before the model runs.** Ask for a drug dose, a
+paediatric dose, a prescription, an opioid or sedative dose, or a lethal dose, and
+Aletheia returns a refusal instead of an answer — instantly, because no inference
+happens. The refusal names the class and says what to do instead. Ordinary clinical
+history containing drug names and numbers is not affected. See
+[Safety in the main README](../README.md#safety-refused-in-code).
 
 To stop the web UI: press `Ctrl+C` in the terminal.
 
@@ -471,7 +500,8 @@ Aletheia/
 │   └── ui/index.html          ← Web UI page (self-contained)
 ├── inference/
 │   ├── __init__.py
-│   └── aletheia.py            ← Core inference wrapper
+│   ├── aletheia.py            ← Core inference wrapper (streams tokens)
+│   └── safety.py              ← Hazard classes refused in code
 ├── benchmark/
 │   ├── benchmark.sh           ← Custom compliance benchmark
 │   ├── run_adtc_profiler.sh   ← Official ADTC profiler runner

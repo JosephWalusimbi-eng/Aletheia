@@ -31,6 +31,7 @@ except ImportError:
     HAS_RICH = False
 
 from inference.aletheia import build_prompt, run_inference
+from inference.safety import HazardRefusal, screen
 
 console = Console() if HAS_RICH else None
 
@@ -303,12 +304,31 @@ def collect_symptoms() -> tuple:
 # ── Inference wrapper ─────────────────────────────────────────
 def run_stage(reasoning_type: str, symptoms, duration, age_group, sex,
               extra: str = "") -> tuple[dict, float]:
+    # Refused in code, before the prompt exists. See inference/safety.py.
+    refusal = screen(", ".join(symptoms), extra)
+    if refusal is not None:
+        raise HazardRefusal(refusal)
+
     prompt = build_prompt(symptoms, duration, age_group, sex, reasoning_type, extra=extra)
 
     cprint("\n[dim]Running inference...[/dim]" if HAS_RICH else "\nRunning inference...")
     raw, elapsed = run_inference(prompt, timeout=600)
 
     return parse_json(raw), elapsed
+
+
+def display_refusal(stage: int, refusal) -> None:
+    """A refusal is an answer, not a crash — print it as one."""
+    if HAS_RICH:
+        console.print(Panel(
+            f"[bold]{refusal.message}[/bold]\n\n[dim]{refusal.guidance}[/dim]",
+            title=f"[bold red]Stage {stage} refused in code · {refusal.label}[/bold red]",
+            border_style="red", box=box.ROUNDED,
+        ))
+    else:
+        print(f"\nSTAGE {stage} REFUSED IN CODE - {refusal.label}")
+        print(f"  {refusal.message}")
+        print(f"  {refusal.guidance}")
 
 
 # ── Main clinical flow ────────────────────────────────────────
@@ -328,6 +348,9 @@ def run_case():
         data1, elapsed1 = run_stage(
             "initial_with_followup", symptoms, duration, age_group, sex
         )
+    except HazardRefusal as r:
+        display_refusal(1, r.refusal)
+        return True
     except Exception as e:
         cprint(f"[bold red]Stage 1 failed:[/bold red] {e}"
                if HAS_RICH else f"Stage 1 failed: {e}")
@@ -375,6 +398,9 @@ def run_case():
             "test_recommendation", symptoms, duration, age_group, sex,
             extra=followup_answers,
         )
+    except HazardRefusal as r:
+        display_refusal(2, r.refusal)
+        return True
     except Exception as e:
         cprint(f"[bold red]Stage 2 failed:[/bold red] {e}"
                if HAS_RICH else f"Stage 2 failed: {e}")
@@ -430,6 +456,9 @@ def run_case():
             "advisory_conclusion", symptoms, duration, age_group, sex,
             extra=test_results,
         )
+    except HazardRefusal as r:
+        display_refusal(3, r.refusal)
+        return True
     except Exception as e:
         cprint(f"[bold red]Stage 3 failed:[/bold red] {e}"
                if HAS_RICH else f"Stage 3 failed: {e}")

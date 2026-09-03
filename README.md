@@ -71,7 +71,17 @@ A self-contained web interface with enforced stage ordering:
 - The Stage 2 button is disabled until Stage 1 completes successfully
 - The Stage 3 button is disabled until Stage 2 completes successfully
 - Each stage's primary output is prominently displayed
-- A live elapsed-second counter runs while the model is working
+- **The answer streams as it is generated.** A stage takes 40 to 60 seconds; the
+  text appears token by token in a live panel, with elapsed seconds and a running
+  rate, so a slow local model never looks like a hung one. When the stage ends the
+  live panel is replaced by the parsed panels, and the status line shows
+  llama.cpp's own measured figure — e.g. `Completed in 47.2s, 122 tokens, 5.67 tok/s`.
+- **A runtime rail in the header** shows what is actually loaded on this machine:
+  the GGUF filename, its size on disk, the thread count, CPU only. "Fully offline"
+  stops being a claim and becomes something the reader can check. If the model file
+  or the llama.cpp binary is missing, it says so there rather than after a minute
+  of waiting.
+- **Refusals are shown as answers, not errors** — see [Safety](#safety-refused-in-code).
 
 It is served by Python's standard library over a small JSON API, and the page carries
 its own CSS and JavaScript. There is no web framework and no external asset, so it
@@ -81,6 +91,19 @@ loads instantly and works with no internet connection.
 python3 aletheia/server.py
 # Opens at http://localhost:7860
 ```
+
+The server binds `127.0.0.1`, so the console is reachable from this laptop only.
+Patient presentations are typed into it, so it is not published to the ward network
+unless you deliberately ask for that:
+
+```bash
+ALETHEIA_HOST=0.0.0.0 python3 aletheia/server.py   # reachable from the whole LAN
+ALETHEIA_PORT=8080     python3 aletheia/server.py   # different port
+```
+
+Routes: `GET /api/status` (runtime facts), `POST /api/stage/stream`
+(server-sent events: `refused` | `token` | `result` | `error`), and
+`POST /api/stage` (the original blocking JSON call, kept for scripts).
 
 ### Interactive Terminal (`cli.py`)
 A rich terminal interface that walks through all three stages sequentially:
@@ -110,6 +133,42 @@ python3 run.py --symptoms "fever, headache, neck stiffness" --duration 2 \
 
 # Output raw JSON
 python3 run.py --symptoms "fever, headache" --duration 3 --json
+```
+
+---
+
+## Safety: refused in code
+
+Aletheia is advisory. It helps a clinician decide; it does not prescribe. That
+boundary is enforced in `inference/safety.py`, on the text the clinician typed,
+**before any prompt is built and before llama.cpp is launched** — not by asking the
+model to hold an instruction. A 3B model asked for a neonatal gentamicin dose will
+usually answer, and a wrong number there is the most dangerous output this system
+can produce.
+
+Five classes are refused:
+
+| Class | Refused |
+|---|---|
+| `paediatric_dose` | paediatric or weight-based dose calculations |
+| `controlled_substance` | doses for opioids, sedatives, anaesthetic agents |
+| `drug_dose` | drug doses generally |
+| `prescription` | "prescribe X", "which antibiotic should I give" |
+| `lethal_dose` | lethal, fatal or harmful-dose questions |
+
+A refusal is an outcome, not a crash: the web UI renders it in place of the output
+with the class name and what to do instead, the terminal CLI prints it as its own
+panel, and `run.py` exits **2** (distinct from 1 for a real failure).
+
+Every class needs two keys to fire — a request marker *and* a hazard marker — so
+ordinary clinical history passes straight through. `gave 500 mg ceftriaxone at 0600,
+creatinine now 180` is a legitimate Stage 3 input and is not refused; `what dose of
+ceftriaxone should I give` is. The class list is a clinical-policy decision, kept
+deliberately short. After editing it, run the self-checks, which assert both that
+hazards are caught and that ordinary presentations are not:
+
+```bash
+python3 -m inference.safety
 ```
 
 ---
@@ -165,10 +224,11 @@ If `config.json` is absent, the system falls back to:
 ```
 aletheia/
 ├── aletheia/
-│   ├── server.py           Web UI server (standard library, three-stage flow)
+│   ├── server.py           Web UI server (standard library, streaming, 127.0.0.1)
 │   └── ui/index.html       Web UI page (self-contained CSS and JavaScript)
 ├── inference/
-│   ├── aletheia.py         Core inference wrapper and prompt builder
+│   ├── aletheia.py         Core inference wrapper, prompt builder, token streaming
+│   ├── safety.py           Hazard classes refused in code, before the model runs
 │   └── config.json         Runtime configuration (create this)
 ├── cli.py                  Interactive terminal interface
 ├── run.py                  Single-stage command-line tool
