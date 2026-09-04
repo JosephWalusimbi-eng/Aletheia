@@ -274,6 +274,8 @@ Under the ADTC profiler's benchmark settings, using a 512-token prompt and 128 g
 * **7.04 tokens per second**
 * **24.7 seconds to first token**
 
+These are cold-cache figures, and deliberately so. They are the median of three runs, each taken after a full restart so that the 1.93 GB model is read from disk rather than served out of memory. Repeated runs on a warm machine reach 8.10 tokens per second because the model is already resident, but a clinician's first consultation after switching the laptop on is a cold one, so the cold figure is the honest one to publish. Across the three cold runs throughput varied by 7.6%; peak memory varied by 0.01%.
+
 That first-token figure is a stress case rather than a typical one. The profiler prepends a 512-token prompt, whereas real Stage 1 prompts run to roughly 50 to 100 tokens and produce substantially faster first output.
 
 After thread tuning, a complete three-stage consultation takes approximately **2 to 2.5 minutes end-to-end**.
@@ -340,7 +342,9 @@ Measured peak RSS was **3,278 MB**, leaving approximately **3,890 MB below the 7
 
 This provides a substantial operating margin rather than placing the system at the edge of the available memory limit.
 
-Memory usage remained stable, varying by less than 0.25% across two operating-system versions and different `llama.cpp` builds.
+Memory usage remained stable, varying by less than 0.25% across two operating-system versions and different `llama.cpp` builds. In the most recent round, peak RSS was identical to within 0.01% across three cold runs.
+
+The measurement conditions matter and are worth stating. The machine was capped to 8 GB of RAM with swap disabled, so a process exceeding the 7,168 MB ceiling would have failed outright rather than quietly paging to disk. A peak-memory figure taken with several gigabytes of swap available would not be evidence of anything.
 
 ### 6.6 BERTScore-F1 of 0.909
 
