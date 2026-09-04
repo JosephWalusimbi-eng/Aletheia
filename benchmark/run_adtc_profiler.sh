@@ -48,12 +48,32 @@ fi
 export PATH="$HOME/llama.cpp/build/bin:$PATH"
 echo "  llama-bench found ✅"
 
-# Model file check
+# Model file check.
+#
+# The profiler reads the model from inside the submission bundle, at the path
+# metadata.json records. The running system reads it from wherever
+# inference/config.json points, which on a WSL install is the Linux filesystem
+# rather than /mnt — reading the 1.93 GB file over drvfs measured 17.9 s against
+# 0.70 s from ext4, so keeping the working copy off /mnt matters.
+#
+# Rather than keep two copies of a 1.93 GB file permanently, the bundle copy is
+# restored from the configured one when it is missing, and only for the profiler
+# run.
 MODEL="$REPO_DIR/model/aletheia_q4km.gguf"
 if [ ! -f "$MODEL" ]; then
-    echo "  ❌  Model not found: $MODEL"
-    echo "  Run: bash download_model.sh"
-    exit 1
+    CONFIGURED=$(python3 -c \
+        "import json,sys; print(json.load(open(sys.argv[1])).get('model_path',''))" \
+        "$REPO_DIR/inference/config.json" 2>/dev/null || true)
+    if [ -n "$CONFIGURED" ] && [ -f "$CONFIGURED" ]; then
+        echo "  Bundle copy absent; copying from $CONFIGURED"
+        echo "  (1.93 GB onto this filesystem — this takes a moment)"
+        mkdir -p "$REPO_DIR/model"
+        cp "$CONFIGURED" "$MODEL"
+    else
+        echo "  ❌  Model not found: $MODEL"
+        echo "  Run: bash download_model.sh"
+        exit 1
+    fi
 fi
 echo "  Model: $(du -sh $MODEL | cut -f1) ✅"
 
