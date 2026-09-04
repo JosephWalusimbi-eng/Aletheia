@@ -1,0 +1,251 @@
+===============================================================================
+ALETHEIA - HOW TO RUN
+===============================================================================
+
+Plain-text quick reference for a machine that is already set up. If Aletheia
+has never been installed on this machine, do the install first:
+
+    SETUP_AND_TESTING.md      full install, Windows and Ubuntu
+    docs/VM_SETUP_GUIDE.md    virtual machine or WSL2, plus the ADTC profiler
+
+Every command below is run from the repository directory, on Linux (a real
+Ubuntu install, or Ubuntu under WSL2 on Windows).
+
+
+-------------------------------------------------------------------------------
+0. IS IT READY?
+-------------------------------------------------------------------------------
+
+    python3 -c "import sys; sys.path.insert(0,'.'); \
+        from inference.aletheia import runtime_info; print(runtime_info())"
+
+Look for model_present: True and runner_present: True. If either is False:
+
+    model missing   ->  bash download_model.sh
+    runner missing  ->  bash install.sh
+
+The model is about 1.93 GB. Where it lives is recorded in
+inference/config.json under "model_path".
+
+
+-------------------------------------------------------------------------------
+1. THE WEB CONSOLE  (the usual way)
+-------------------------------------------------------------------------------
+
+    python3 aletheia/server.py
+
+Then open        http://localhost:7860
+
+The server prints the address when it starts and keeps running until you press
+Ctrl+C. It listens on 127.0.0.1 only, so nothing on the network can reach it.
+
+On WSL2, run the command inside Ubuntu and open the address in your ordinary
+Windows browser. Windows and WSL share localhost, so no configuration is
+needed.
+
+There is also a launcher that starts the server, waits for it, and opens the
+browser for you:
+
+    bash start_aletheia.sh
+    bash start_aletheia.sh --install-shortcut    # adds it to the apps menu
+
+To run the console on a different port, or to expose it beyond this machine
+(understand that this puts patient presentations on the network before you do
+it):
+
+    ALETHEIA_PORT=8080 python3 aletheia/server.py
+    ALETHEIA_HOST=0.0.0.0 python3 aletheia/server.py
+
+To stop a server that is running in the background:
+
+    pkill -f aletheia/server.py
+
+
+-------------------------------------------------------------------------------
+2. THE TERMINAL CONSULTATION
+-------------------------------------------------------------------------------
+
+    python3 cli.py
+
+Walks through all three stages in order and asks for what each one needs.
+Type 'quit' or 'exit' at any symptom prompt to stop.
+
+
+-------------------------------------------------------------------------------
+3. ONE STAGE AT A TIME  (scripting)
+-------------------------------------------------------------------------------
+
+Stage 1 - assessment and follow-up questions:
+
+    python3 run.py --symptoms "fever, headache, neck stiffness" --duration 2
+
+Stage 2 - investigations, needs the answers to the Stage 1 questions:
+
+    python3 run.py --symptoms "fever, headache, neck stiffness" --duration 2 \
+        --stage test_recommendation \
+        --extra "Kernig positive, no rash, vaccinated, no TB contact"
+
+Stage 3 - management advisory, needs the real investigation results:
+
+    python3 run.py --symptoms "fever, headache, neck stiffness" --duration 2 \
+        --stage advisory_conclusion \
+        --extra "CSF cloudy, WBC 2000, protein high, glucose low, RDT negative"
+
+Useful flags:
+
+    --age        neonate | infant | child | adolescent | adult | elderly
+    --sex        male | female | unknown
+    --json       print the raw JSON response
+    --timeout    seconds to wait for inference (default 600)
+
+Exit codes:  0 success   1 error   2 refused in code (see section 5)
+
+
+-------------------------------------------------------------------------------
+4. HOW LONG IT TAKES
+-------------------------------------------------------------------------------
+
+One stage is 40 to 60 seconds on the target laptop. A full three-stage
+consultation is roughly 2 to 2.5 minutes. This is normal: the model runs on
+the CPU, on this machine, with no server anywhere.
+
+The web console streams the text as it is generated so you can watch it work
+rather than waiting at a blank panel.
+
+Thread count is the biggest thing you control. The default is set at install
+time from the physical core count. To measure the best value for this
+particular machine and write it into the configuration:
+
+    bash benchmark/optimize.sh
+
+
+-------------------------------------------------------------------------------
+5. WHEN ALETHEIA REFUSES
+-------------------------------------------------------------------------------
+
+Some requests are refused before the model is ever run. Asking for a
+paediatric dose, for example:
+
+    "fever, convulsions. what dose of gentamicin for a 3 kg neonate"
+
+comes back as REFUSED IN CODE - Paediatric dosing.
+
+This is not a fault and not a failure of the model. Five classes of request
+are refused deterministically in inference/safety.py: paediatric and
+weight-based dosing, controlled or sedative drug dosing, general drug dosing,
+prescription requests, and lethal-dose requests. Use the national formulary or
+the ward dosing chart for a dose.
+
+Remove the dosing question and resubmit. Aletheia will still help with the
+differential, the investigations and the red flags.
+
+Ordinary clinical history is not affected. Entries like "gave 500 mg
+ceftriaxone at 0600, creatinine now 180" pass straight through, because a
+refusal needs both a request marker and a hazard marker to fire.
+
+
+-------------------------------------------------------------------------------
+6. SAVED CASES
+-------------------------------------------------------------------------------
+
+When a stage finishes you are offered three things, and none of them happens
+by default:
+
+    save                  keep the result as it is
+    edit, then save       correct it first, then keep the corrected version
+    exit without saving   nothing is written
+
+If the same presentation comes back later, Aletheia offers the saved result
+instead of spending another minute generating one. A recalled result always
+says so, with the date it was saved and whether a clinician corrected it, and
+the model is always one click away if you would rather run it fresh.
+
+A saved case records the presentation, never the patient. There is no name,
+patient number or date of birth anywhere in the system.
+
+In the web console the three choices appear under each stage's output. In the
+terminal consultation you are asked once, at the end.
+
+From the scripting CLI, saving and recall are opt-in:
+
+    python3 run.py -s "fever, headache" -d 3 --recall --save
+    python3 run.py --list-cases
+    python3 run.py --forget <key>
+
+Recall is off by default there on purpose: a benchmark must measure the model,
+not a stored answer.
+
+The case store is a single JSON file next to the model weights. Delete it and
+Aletheia runs exactly as before. To put it somewhere else:
+
+    export ALETHEIA_CASE_STORE=/path/to/cases.json
+
+
+-------------------------------------------------------------------------------
+7. CHECKING THAT IT ALL STILL WORKS
+-------------------------------------------------------------------------------
+
+    python3 -m inference.safety      hazard screening, refusals and passes
+    python3 -m inference.recall      case key, storage, ageing, identifiers
+
+Both print a list of checks and end with a pass or fail line. They need no
+model and take under a second.
+
+To reproduce the published performance figures:
+
+    bash benchmark/run_adtc_profiler.sh
+
+This takes about five minutes. Measure with the machine at rest, and read
+benchmark/profiler_runs.json first: throughput depends heavily on whether the
+model is already in memory, and the published figures are cold-start numbers.
+
+
+-------------------------------------------------------------------------------
+8. WHEN SOMETHING GOES WRONG
+-------------------------------------------------------------------------------
+
+"Model not found"
+    The path in inference/config.json does not point at the file. Check it,
+    or run: bash download_model.sh
+
+"llama-cli not found" / "llama-completion not found"
+    llama.cpp is not built where the configuration expects. Run:
+    bash install.sh
+
+The browser cannot reach http://localhost:7860
+    Check the server is actually up:  curl http://localhost:7860/api/health
+    It should answer {"ok":true}. If the port is taken, start it on another:
+    ALETHEIA_PORT=8080 python3 aletheia/server.py
+
+"Another stage is running. Queued."
+    Expected. One inference runs at a time so that two requests do not fight
+    over the same cores. It will start when the current one finishes.
+
+A stage returns nothing, or a panel says no differential was returned
+    Check the raw output in the streaming panel. If the model produced text
+    but the panel is empty, that is a parsing problem worth reporting.
+
+"bad interpreter: /bin/bash^M"
+    The script has Windows line endings, usually from being edited on the
+    Windows side. Fix it with:  sed -i 's/\r$//' <script>
+
+The system is slow after moving files around
+    Keep the model weights and the llama.cpp build on the Linux filesystem,
+    not under /mnt. Reading the model from /mnt measured 17.9 seconds against
+    0.70 seconds from the Linux side.
+
+
+-------------------------------------------------------------------------------
+9. WHAT ALETHEIA IS NOT
+-------------------------------------------------------------------------------
+
+It is decision support. It does not diagnose, and it does not prescribe.
+Every Stage 3 output states that the treating clinician holds all decision
+authority, and that is not a formality.
+
+It runs entirely on this machine. It uploads nothing, synchronises nothing,
+and reports nothing, because no part of the running system can open an
+outbound connection. The only step that uses the network is downloading the
+model once, before first use.
+
+===============================================================================
