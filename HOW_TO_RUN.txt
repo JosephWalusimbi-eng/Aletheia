@@ -49,6 +49,18 @@ browser for you:
     bash start_aletheia.sh
     bash start_aletheia.sh --install-shortcut    # adds it to the apps menu
 
+Under WSL the launcher opens your ordinary Windows browser. It uses wslview if
+the wslu package is installed, and Windows interop otherwise, so it needs no
+extra package.
+
+--install-shortcut writes a desktop entry to
+~/.local/share/applications/aletheia.desktop. On WSL with WSLg this appears in
+the Windows Start Menu: press Start and type Aletheia. There is no icon on the
+Windows desktop itself. Launched that way the server runs with no visible
+window, so stop it with:
+
+    pkill -f aletheia/server.py
+
 To run the console on a different port, or to expose it beyond this machine
 (understand that this puts patient presentations on the network before you do
 it):

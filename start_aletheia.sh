@@ -15,6 +15,28 @@ URL="http://localhost:${PORT}"
 
 # ── Helpers ───────────────────────────────────────────────────
 open_browser() {
+    # Under WSL the browser is on the Windows side, so a Linux opener either
+    # is not installed or opens nothing the user can see. wslview handles this
+    # properly when the wslu package is present; Windows interop needs no
+    # package at all, so it is the fallback. Neither exit code is trustworthy
+    # here (explorer.exe habitually returns non-zero on success), so the call
+    # is made and accepted.
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+        if command -v wslview >/dev/null 2>&1; then
+            wslview "$URL" >/dev/null 2>&1
+            return 0
+        fi
+        if command -v explorer.exe >/dev/null 2>&1; then
+            explorer.exe "$URL" >/dev/null 2>&1
+            return 0
+        fi
+        if command -v powershell.exe >/dev/null 2>&1; then
+            powershell.exe -NoProfile -Command "Start-Process '"'"'$URL'"'"'" \
+                >/dev/null 2>&1
+            return 0
+        fi
+    fi
+
     for opener in xdg-open wslview sensible-browser open; do
         if command -v "$opener" >/dev/null 2>&1; then
             "$opener" "$URL" >/dev/null 2>&1 &
