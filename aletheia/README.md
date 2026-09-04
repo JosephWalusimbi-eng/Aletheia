@@ -34,7 +34,7 @@ Aletheia runs the entire clinical reasoning pipeline **on-device**:
 - ✅ **No internet required** — ever, at inference time
 - ✅ **No GPU required** — runs on CPU only
 - ✅ **1.93 GB model file** — fits on a USB drive
-- ✅ **3,281 MB peak RAM** — 3,887 MB below the 7,168 MB ADTC ceiling
+- ✅ **3,278 MB peak RAM** — 3,890 MB below the 7,168 MB ADTC ceiling
 - ✅ **Web UI + CLI** — browser interface or terminal, launched from a desktop icon
 - ✅ **50 clinical conditions** weighted for African disease epidemiology
 - ✅ **Three enforced reasoning stages** — follow-up questions, investigations, advisory
@@ -424,13 +424,13 @@ python3 run.py --symptoms "heavy bleeding after delivery, pallor, tachycardia" -
 | ECE (Calibration) | 0.275 |
 | Training Loss (final) | 0.5197 |
 | Training Time (A100) | 1.92 hours |
-| Tokens per second (ADTC profiler) | **5.68 t/s** |
+| Tokens per second (ADTC profiler) | **7.04 t/s** |
 | Tokens per second (tuned, 4 threads) | **7.10 t/s** |
-| First token latency (512-token prompt) | 30.0 s |
-| Peak RAM (ADTC profiler) | **3,281 MB** |
-| Steady-state RAM | 3,121 MB |
+| First token latency (512-token prompt) | 24.7 s |
+| Peak RAM (ADTC profiler) | **3,278 MB** |
+| Steady-state RAM | 3,148 MB |
 | ADTC Memory Ceiling | 7,168 MB |
-| Margin | 3,887 MB |
+| Margin | 3,890 MB |
 | **ADTC Status** | ✅ **PASS** |
 
 Runtime figures are from the ADTC profiler on an Intel Core i5-8350U; see
@@ -537,7 +537,7 @@ Aletheia/
 
 | Requirement | Value | Limit | Status |
 |-------------|-------|-------|--------|
-| Peak RAM | 3,281 MB | 7,168 MB | ✅ PASS (3,887 MB margin) |
+| Peak RAM | 3,278 MB | 7,168 MB | ✅ PASS (3,890 MB margin) |
 | Internet at runtime | None | None | ✅ PASS |
 | GPU at runtime | None | None | ✅ PASS |
 | African use case | Healthcare, Uganda | Bonus +10 pts | ✅ YES |

@@ -114,7 +114,7 @@ The system is designed around conditions that are particularly relevant to the A
 
 Aletheia runs entirely on an **Intel Core i5-8350U laptop at 1.70 GHz**, without an internet connection, a dedicated GPU, or any cloud dependency.
 
-Measured peak RSS is **3,281 MB**, leaving approximately **3,887 MB of headroom** beneath the 7,168 MB ADTC memory ceiling.
+Measured peak RSS is **3,278 MB**, leaving approximately **3,890 MB of headroom** beneath the 7,168 MB ADTC memory ceiling.
 
 This makes the system suitable for environments where reliable internet connectivity and high-performance computing resources cannot be assumed.
 
@@ -271,8 +271,8 @@ CPU inference is inherently slower than GPU inference.
 
 Under the ADTC profiler's benchmark settings, using a 512-token prompt and 128 generated tokens, Aletheia achieved:
 
-* **5.68 tokens per second**
-* **30.0 seconds to first token**
+* **7.04 tokens per second**
+* **24.7 seconds to first token**
 
 That first-token figure is a stress case rather than a typical one. The profiler prepends a 512-token prompt, whereas real Stage 1 prompts run to roughly 50 to 100 tokens and produce substantially faster first output.
 
@@ -334,9 +334,9 @@ This represents approximately a **71% increase in throughput**, and it reduced a
 
 The optimisation is included in the project as a tuner, allowing the system to identify an appropriate configuration for different deployment machines.
 
-### 6.5 3,281 MB Peak RAM Usage
+### 6.5 3,278 MB Peak RAM Usage
 
-Measured peak RSS was **3,281 MB**, leaving approximately **3,887 MB below the 7,168 MB ADTC memory ceiling**, with steady-state RSS of 3,121 MB.
+Measured peak RSS was **3,278 MB**, leaving approximately **3,890 MB below the 7,168 MB ADTC memory ceiling**, with steady-state RSS of 3,148 MB.
 
 This provides a substantial operating margin rather than placing the system at the edge of the available memory limit.
 

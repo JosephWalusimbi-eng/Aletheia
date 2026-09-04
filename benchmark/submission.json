@@ -31,7 +31,7 @@
     ],
     "model": {
       "name": "Aletheia-Q4_K_M",
-      "runtime": "llama.cpp (CPU only, -ngl 0)",
+      "runtime": "llama.cpp",
       "quantization": "GGUF Q4_K_M",
       "parameters_estimate": "3B",
       "packaging": "binary_bundle"
@@ -40,29 +40,29 @@
   "environment": {
     "measured_on": "participant_laptop",
     "cpu_model": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
-    "ram_gb": 9.7,
+    "ram_gb": 7.8,
     "gpu": "none",
     "os": "Ubuntu 26.04 LTS"
   },
   "throughput": {
-    "tokens_per_second_generation": 5.68,
-    "first_token_latency_ms": 29985.68,
+    "tokens_per_second_generation": 7.04,
+    "first_token_latency_ms": 24688.83,
     "prompt_tokens": 512,
     "generated_tokens": 128
   },
   "memory": {
-    "peak_rss_mb": 3281.26,
-    "steady_state_rss_mb": 3121.18,
-    "peak_vms_mb": 3771.29
+    "peak_rss_mb": 3278.32,
+    "steady_state_rss_mb": 3148.13,
+    "peak_vms_mb": 3762.06
   },
   "accuracy": [],
   "cpu_thermal": {
-    "cpu_percent_p99": 51.0,
+    "cpu_percent_p99": 63.5,
     "core_temp_c_peak": null,
     "throttled": false
   },
   "reproducibility": {
-    "git_commit_sha": "baed3b2dd3d4",
+    "git_commit_sha": "9f163406299d",
     "docker_image_digest": "unknown",
     "random_seed": 42
   },

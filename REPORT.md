@@ -204,23 +204,41 @@ All measurements produced by the ADTC profiler (`adtc-profiler 0.1.0`) running i
 | Metric | Value |
 |---|---|
 | Machine | Intel Core i5-8350U @ 1.70 GHz |
-| RAM available | 9.7 GB |
+| RAM available | 7.8 GB (WSL2 capped to 8 GB, swap disabled) |
 | OS | Ubuntu 26.04 LTS (WSL2) |
-| Inference runtime | llama.cpp b10733 (CPU only, `-ngl 0`) |
+| Inference runtime | llama.cpp (CPU only, `-ngl 0`) |
 | Quantization | GGUF Q4_K_M |
 | Model file size | 1.93 GB (1.80 GiB) |
 | Prompt tokens (profiler run) | 512 |
 | Generated tokens (profiler run) | 128 |
-| Peak RSS | 3,281 MB |
-| Steady-state RSS | 3,121 MB |
-| Peak VMS | 3,771 MB |
-| Tokens per second (generation) | **5.68 t/s** |
-| First token latency (512-token prompt) | 29,986 ms (30.0 s) |
-| CPU utilization (p99) | 51.0% |
+| Peak RSS | 3,278 MB |
+| Steady-state RSS | 3,148 MB |
+| Peak VMS | 3,762 MB |
+| Tokens per second (generation) | **7.04 t/s** |
+| First token latency (512-token prompt) | 24,689 ms (24.7 s) |
+| CPU utilization (p99) | 63.5% |
 | Throttled | No |
 
 These are the values in `benchmark/submission.json` in this repository, reproducible by
 running `bash benchmark/run_adtc_profiler.sh`.
+
+**Measurement conditions matter here, so they are stated rather than assumed.** The
+figures come from three *cold* runs, each following a full WSL shutdown so that the VM
+page cache is discarded and the 1.93 GB model is read from disk every time. The table
+reports the median run; all six runs are in `benchmark/profiler_runs.json`.
+
+Memory is the stable quantity. Peak RSS was 3,278 MB in all three cold runs — a spread
+of 0.01% — and 3,278–3,281 MB across every run ever recorded, including those under a
+different memory configuration. Throughput is not stable in the same way: the cold runs
+span 6.87–7.41 t/s (7.6%), and warm runs reach 8.10 t/s because a resident model loads
+faster. The cold figure is published because it is what a clinician gets on the first
+consultation after switching the machine on.
+
+The environment is deliberately constrained. Left at its defaults WSL2 exposed 9.7 GB of
+RAM and roughly 3 GB of swap, under which a process exceeding the 7,168 MB ceiling would
+page rather than fail — so a peak-RSS measurement taken there would not be evidence of
+anything. `.wslconfig` caps memory at 8 GB and sets `swap=0`. CPU is left alone: the host
+is a 4-core, 8-thread part and that is what the ADTC target machine has.
 
 The profiler drives `llama-bench` with its own settings (512-token prompt, 128 generated
 tokens) and does not read `inference/config.json`, so the thread tuning described in
@@ -228,10 +246,11 @@ section 2 does not change these figures. It changes what the application does: w
 threads a full Stage 1 completes in about 46 seconds against 79 at 8 threads, and a
 three-stage consultation runs in roughly 2 to 2.5 minutes.
 
-An earlier profiling run on Ubuntu 22.04.5 with an older llama.cpp build recorded
-3.71 t/s and 32.7 s to first token, with peak RSS of 3,273 MB. Memory was effectively
-identical (within 0.25%); the throughput difference comes from the llama.cpp build. The
-figures above supersede it.
+Two earlier rounds are superseded by the above. A run on Ubuntu 22.04.5 with an older
+llama.cpp build recorded 3.71 t/s and 32.7 s to first token at 3,273 MB peak RSS; a later
+one on this machine recorded 5.68 t/s and 30.0 s at 3,281 MB, measured before the memory
+cap and without controlling for cache state. Across all of them peak RSS moves by less
+than 0.25%, which is the reason the memory claim is the one stated most firmly.
 
 First-token latency above is for a 512-token stress prompt. Typical Stage 1 prompts are 50–100 tokens and will produce substantially lower first-token latency.
 
@@ -239,7 +258,7 @@ First-token latency above is for a 512-token stress prompt. Typical Stage 1 prom
 
 | Metric | Value | ADTC Limit | Status |
 |---|---|---|---|
-| Peak RSS | 3,281 MB | 7,168 MB | **✅ PASS** (3,887 MB margin) |
+| Peak RSS | 3,278 MB | 7,168 MB | **✅ PASS** (3,890 MB margin) |
 | Internet required at inference | None | None | **✅ PASS** |
 | GPU required | None | None | **✅ PASS** |
 | African use case | Healthcare, Uganda | +10 pts bonus | **✅ YES** |

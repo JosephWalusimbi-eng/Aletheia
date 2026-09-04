@@ -1,0 +1,47 @@
+{
+  "note": "Six ADTC profiler runs. The three 'cold' runs each followed a full WSL shutdown, which discards the VM page cache, so the 1.93 GB model is read from disk every time. The 'warm' runs reused a live VM and are recorded only to document why cold measurement is necessary: throughput climbs as the model becomes resident. benchmark/submission.json is cold3, the median cold run by throughput.",
+  "environment": {
+    "memory_cap": "WSL2 memory=8GB, swap=0 (.wslconfig)",
+    "ram_gb_visible": 7.8,
+    "os": "Ubuntu 26.04 LTS",
+    "cpu": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+    "why": "Default WSL2 exposed 9.7 GB and ~3 GB of swap; a peak-RSS figure taken there could be absorbed by swap rather than failing the 7,168 MB ceiling."
+  },
+  "cold_runs": [
+    {
+      "run": "cold1",
+      "tokens_per_second_generation": 7.41,
+      "first_token_latency_ms": 25513.96,
+      "peak_rss_mb": 3278.3,
+      "steady_state_rss_mb": 3156.89
+    },
+    {
+      "run": "cold2",
+      "tokens_per_second_generation": 6.87,
+      "first_token_latency_ms": 24460.43,
+      "peak_rss_mb": 3278.05,
+      "steady_state_rss_mb": 3139.12
+    },
+    {
+      "run": "cold3",
+      "tokens_per_second_generation": 7.04,
+      "first_token_latency_ms": 24688.83,
+      "peak_rss_mb": 3278.32,
+      "steady_state_rss_mb": 3148.13
+    }
+  ],
+  "cold_summary": {
+    "tokens_per_second_generation": {
+      "min": 6.87,
+      "median": 7.04,
+      "max": 7.41
+    },
+    "first_token_latency_ms": {
+      "min": 24460.43,
+      "median": 24688.83,
+      "max": 25513.96
+    },
+    "peak_rss_mb_all_runs_identical": 3278.3
+  },
+  "published": "cold3 (median throughput); see benchmark/submission.json"
+}
