@@ -1,0 +1,205 @@
+===============================================================================
+ALETHEIA - HOW TO PUSH TO GITHUB
+===============================================================================
+
+Plain-text quick reference for getting local changes onto GitHub. Companion to
+HOW_TO_RUN.txt. Run these from the repository directory, inside Ubuntu:
+
+    wsl -d Ubuntu
+    cd /mnt/d/Aletheia-Ug
+
+Git also works from PowerShell on the Windows side. Pick one and stay with it
+for a given change, so you are not half committed in two places.
+
+This repository pushes to
+
+    https://github.com/JosephWalusimbi-eng/Aletheia.git    (remote: origin)
+
+on branch main, and the credentials are already stored in Ubuntu, so a push
+does not ask for a password.
+
+
+-------------------------------------------------------------------------------
+1. THE FOUR COMMANDS
+-------------------------------------------------------------------------------
+
+    git status                      what has changed
+    git add -A                      stage all of it
+    git commit -m "what you did"    record it locally
+    git push                        send it to GitHub
+
+Note the dash: it is  git add -A,  not  git add A.  Without the dash Git reads
+A as a filename and answers
+
+    fatal: pathspec 'A' did not match any files
+
+Other ways to stage:
+
+    git add HOW_TO_RUN.txt          one named file
+    git add docs/                   everything under a directory
+    git add -p                      go through the changes hunk by hunk and
+                                    choose what to include
+
+Nothing leaves the machine until git push. Commit as often as you like.
+
+
+-------------------------------------------------------------------------------
+2. LOOK BEFORE YOU COMMIT
+-------------------------------------------------------------------------------
+
+    git status                      short list of what changed
+    git diff                        the actual changes, not yet staged
+    git diff --staged               the actual changes, already staged
+    git log --oneline -10           the last ten commits
+
+Worth doing every time. git status tells you a file changed; git diff tells you
+whether the change is the one you meant to make.
+
+
+-------------------------------------------------------------------------------
+3. A WHOLE PUSH, START TO FINISH
+-------------------------------------------------------------------------------
+
+    cd /mnt/d/Aletheia-Ug
+    git pull --rebase               take anything new from GitHub first
+    git status
+    git diff
+    git add -A
+    git commit -m "Say what the change does"
+    git push
+
+git pull --rebase first is the habit that avoids most trouble. It replays your
+work on top of whatever is already on GitHub, so the history stays a straight
+line and the push is not rejected.
+
+
+-------------------------------------------------------------------------------
+4. WRITING THE MESSAGE
+-------------------------------------------------------------------------------
+
+One line, present tense, saying what the change does rather than which files
+moved. The existing history is the model:
+
+    Open the browser correctly when launching under WSL
+    Add plain-text run instructions
+    State measurement conditions for the published profiler figures
+
+If one line is not enough, leave a blank line and add the detail underneath:
+
+    git commit -m "Short summary line" -m "The longer explanation, as many
+    sentences as it takes."
+
+
+-------------------------------------------------------------------------------
+5. WHAT NEVER GETS PUSHED
+-------------------------------------------------------------------------------
+
+.gitignore already keeps these out, and it should stay that way:
+
+    the model weights          model/, *.gguf, and the other weight formats
+    the llama.cpp build        llama.cpp/
+    inference/config.json      machine-specific absolute paths
+    __pycache__/, *.pyc        compiled Python
+
+The weights are 1.93 GB and GitHub refuses files over 100 MB, so a push that
+included them would fail anyway. inference/config.json is left out on purpose:
+every machine writes its own, which is why a fresh clone needs bash
+install.sh and bash download_model.sh before it will run.
+
+To check what a commit is about to contain:
+
+    git status
+    git diff --staged --stat
+
+If something is staged that should not be, take it back out with
+
+    git restore --staged <file>     unstage it, keep the file as it is
+
+
+-------------------------------------------------------------------------------
+6. WORKING ON A BRANCH
+-------------------------------------------------------------------------------
+
+For a change you want reviewed, or one that might not work out:
+
+    git checkout -b short-branch-name
+    ... edit, add, commit as usual ...
+    git push -u origin short-branch-name
+
+The -u is needed only on the first push of a new branch; after that git push
+on its own is enough. GitHub prints a link for opening a pull request. To come
+back to the main line:
+
+    git checkout main
+    git pull --rebase
+
+
+-------------------------------------------------------------------------------
+7. WHEN SOMETHING GOES WRONG
+-------------------------------------------------------------------------------
+
+fatal: pathspec 'A' did not match any files
+    A missing dash. Use git add -A.
+
+! [rejected] main -> main (fetch first / non-fast-forward)
+    GitHub has commits you do not. Bring them in, then push again:
+
+        git pull --rebase
+        git push
+
+    If the rebase reports a conflict, Git names the files. Edit each one,
+    remove the <<<<<<< ======= >>>>>>> markers, then:
+
+        git add <file>
+        git rebase --continue
+
+    To abandon the attempt and go back to where you started:
+
+        git rebase --abort
+
+fatal: detected dubious ownership in repository
+    Ubuntu Git being careful about a repository on the Windows drive. Tell it
+    this one is fine:
+
+        git config --global --add safe.directory /mnt/d/Aletheia-Ug
+
+warning: LF will be replaced by CRLF
+    Not an error. The file is stored with Unix line endings and checked out
+    with Windows ones. Ignore it. If a shell script ever fails with
+    "bad interpreter: /bin/bash^M", fix that file with:
+
+        sed -i 's/\r$//' <script>
+
+Authentication failed
+    The stored GitHub token has expired or was never set. Make a new personal
+    access token at github.com, Settings, Developer settings, Personal access
+    tokens, with repo scope, then push once and give your username and the
+    token in place of the password. credential.helper is set to store, so it
+    is remembered afterwards.
+
+I committed something I did not mean to
+    Nothing has been pushed yet:
+
+        git reset --soft HEAD~1     undo the commit, keep the changes staged
+
+    Already pushed: make a new commit that corrects it rather than rewriting
+    history, since other clones may already have the old one.
+
+I want to throw away my uncommitted changes to a file
+    This cannot be undone; be sure first.
+
+        git restore <file>
+
+
+-------------------------------------------------------------------------------
+8. RIGHT NOW
+-------------------------------------------------------------------------------
+
+HOW_TO_RUN.txt is modified and not yet committed. To send it up:
+
+    cd /mnt/d/Aletheia-Ug
+    git add -A
+    git commit -m "Say the run instructions must be run from inside Ubuntu"
+    git push
+
+===============================================================================

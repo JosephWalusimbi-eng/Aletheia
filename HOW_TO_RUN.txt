@@ -11,6 +11,19 @@ has never been installed on this machine, do the install first:
 Every command below is run from the repository directory, on Linux (a real
 Ubuntu install, or Ubuntu under WSL2 on Windows).
 
+On Windows that means inside Ubuntu, not in PowerShell and not in the Command
+Prompt. The model weights and the llama.cpp build sit on the Linux filesystem,
+at paths like /home/<you>/aletheia-models, which Windows Python cannot see. Run
+the server from PowerShell and it reports the model as missing even though the
+file is there and complete. Open Ubuntu first:
+
+    wsl -d Ubuntu
+    cd /mnt/d/Aletheia-Ug          # wherever the repository is
+
+Name the distribution with -d Ubuntu whenever your default WSL distribution is
+something else, docker-desktop for instance. Inside Ubuntu the interpreter is
+python3; there is usually no command called python.
+
 
 -------------------------------------------------------------------------------
 0. IS IT READY?
@@ -219,6 +232,17 @@ model is already in memory, and the published figures are cold-start numbers.
 "Model not found"
     The path in inference/config.json does not point at the file. Check it,
     or run: bash download_model.sh
+
+"Model not found", but the file is there
+    The command was run from Windows rather than from inside Ubuntu.
+    inference/config.json holds Linux paths, and Windows Python cannot reach
+    them. Run wsl -d Ubuntu first, cd to the repository, and try again. The
+    weights are where the configuration says they are if this lists a file of
+    about 1.9 GB:
+
+        wsl -d Ubuntu -- ls -l /home/<you>/aletheia-models/
+
+    Then run the section 0 readiness check again, from inside Ubuntu.
 
 "llama-cli not found" / "llama-completion not found"
     llama.cpp is not built where the configuration expects. Run:
